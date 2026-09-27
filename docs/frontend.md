@@ -12,7 +12,7 @@ Vorbild und Referenz ist die Oberfläche von Skytech HEMS (daraus übernommen: `
 
 | Baustein | Wahl | Warum |
 |---|---|---|
-| Bibliothek | React 18 | Bekannt, stabil, kein Framework-Overhead |
+| Bibliothek | React 19 | Bekannt, stabil, kein Framework-Overhead |
 | Sprache | TypeScript, `strict: true` | Fehler zur Bauzeit statt im Betrieb |
 | Bündler | Vite | Schneller Dev-Server, eingebauter Proxy |
 | Routing | `react-router-dom` | Einzige Laufzeit-Abhängigkeit neben React |

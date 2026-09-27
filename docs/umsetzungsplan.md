@@ -58,7 +58,7 @@ mit vier Diensten:
 | nginx | Debian-Paket | Ingress-Routing, Sub-Pfad für Grafana, Auth-Header setzen |
 | `app/` (Python 3.11, aiohttp, asyncpg) | wie HEMS | Collector, Verwaltungs-API, Backup/Restore, Migrationsrunner, Supervisor-/HA-Client |
 | `app/mcp_server` | offizielles Python-MCP-SDK | LLM-Werkzeuge |
-| `web/` → `app/static/` | React 18 + TS strict + Vite, Design-System aus HEMS übernommen | Verwaltungsoberfläche |
+| `web/` → `app/static/` | React 19 + TS strict + Vite, Design-System aus HEMS übernommen | Verwaltungsoberfläche |
 
 Wiederverwendung aus `SkytechHEMS`: `app/ha_client.py` (WebSocket-/REST-Muster),
 `app/supervisor_client.py` (Optionen, Ingress-Info), `web/`-Gerüst inkl. `styles.css`,

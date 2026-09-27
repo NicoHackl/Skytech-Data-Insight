@@ -18,7 +18,7 @@ Backup-Funktionen, MCP (siehe [roadmap.md](roadmap.md)).
 | Dashboards | Grafana 13.2.2 (OSS) | Plan, D-006 |
 | Eingang | nginx (Debian-Paket) | trennt Ingress und LAN, D-006 |
 | Verwaltungsdienst | Python 3.11, aiohttp, asyncpg | wie Skytech HEMS |
-| Oberfläche | React 18 + TypeScript (`strict`) + Vite | eiserne Regel 8, [frontend.md](frontend.md) |
+| Oberfläche | React 19 + TypeScript (`strict`) + Vite | eiserne Regel 8, [frontend.md](frontend.md) |
 | Prozessaufsicht | s6-overlay v3 aus `ghcr.io/home-assistant/amd64-base-debian:bookworm` | D-005 |
 
 Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.

@@ -8,6 +8,13 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Geändert
+
+- **Abhängigkeiten aktualisiert** (ersetzt die Dependabot-PRs #1–#10): React 19, React Router 7,
+  Vite 8, TypeScript 7, `@vitejs/plugin-react` 6, aiohttp 3.14.3, asyncpg 0.31.0; CI-Actions
+  `checkout`, `setup-python`, `setup-node` auf v7, Node 22 im Frontend-Job (Vite 8 braucht
+  mindestens 20.19). Oberfläche unverändert.
+
 ### Hinzugefügt
 
 - **Meilenstein M0 – Gerüst.** Neues Add-on „Skytech Data Insight" (nur `amd64`): ein Container

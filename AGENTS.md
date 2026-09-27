@@ -13,7 +13,7 @@ MCP für LLMs zugänglich. Daten sind in HA-Backups enthalten und lassen sich zu
 von HA sichern. Verwaltung über ein Ingress-Panel.
 
 Tech-Stack: PostgreSQL 17 + TimescaleDB, Grafana, nginx, Python 3.11 mit aiohttp (Add-on-Dienst),
-React 18 + TypeScript + Vite (Oberfläche), ein Docker-Image mit s6-overlay als HA-Add-on (nur amd64).
+React 19 + TypeScript + Vite (Oberfläche), ein Docker-Image mit s6-overlay als HA-Add-on (nur amd64).
 
 ## Präzedenz bei Widersprüchen
 
