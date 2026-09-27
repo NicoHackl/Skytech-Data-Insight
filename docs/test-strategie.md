@@ -9,6 +9,7 @@
 | Paketierung | `pytest` (`tests/test_packaging.py`) | Manifest, Übersetzungen, s6-Dienste und Abhängigkeiten, jeder Vorlagen-Platzhalter wird gesetzt, Ingress-Sperre und LAN-Header-Entfernung |
 | Lint | `ruff check app tests`, ShellCheck (CI) | Python und Init-/Dienstskripte |
 | Frontend | `cd web && npm run build` | Typprüfung und Bundle; CI prüft Drift des eingecheckten Bundles |
+| Sicherung | `pytest` (`tests/test_backup.py`) | Namensmuster und Pfadschutz, Aufbewahrung, Paketprüfung, sicheres Auspacken, Grafana-Kopie, Ablauf und Fehlerfall der Wiederherstellung |
 | Container-Rauchtest | CI-Job `image` | Image bauen, starten, Datenbank und Grafana gesund, Migrationen gelaufen, Sensor-API antwortet, Grafana über Ingress-Port, LAN-Login und Abwehr gefälschter Header |
 
 ## Integrationstests lokal
@@ -50,3 +51,12 @@ Supervisor.
 
 `ruff check app tests` und `pytest -q` fehlerfrei; bei Änderungen an `web/` Build und Bundle
 mitcommitten; bei Änderungen an `rootfs/` oder `Dockerfile` den lokalen Containertest.
+
+## Sicherung im Container prüfen (vor Releases mit Änderungen an M2)
+
+1. `curl -o paket.tar http://127.0.0.1:18099/api/backups/download`, Daten ändern, Paket per
+   `PUT api/backups/upload` hochladen, `POST api/backups/<datei>/restore` → Änderungen sind weg,
+   Grafana-Dashboards wie im Paket, Aufzeichnung läuft weiter.
+2. HA-Weg: `docker exec <container> /usr/bin/skytech-backup-pre`, Container stoppen, im Volume
+   `pgdata` löschen, starten → Protokoll „Wiederherstellung aus einem Home-Assistant-Backup
+   erkannt", Daten vollständig.

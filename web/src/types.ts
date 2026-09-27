@@ -98,3 +98,36 @@ export interface HaEntity {
   vorschlag: Suggestion
   attribute: HaAttribute[]
 }
+
+export interface BackupFile {
+  datei: string
+  art: string
+  art_text: string
+  groesse_bytes: number
+  erstellt: string
+  erstellt_iso: string
+}
+
+export interface RestoreState {
+  status: 'laeuft' | 'erfolgreich' | 'fehlgeschlagen' | 'unklar'
+  datei: string
+  benutzer: string | null
+  gestartet: string
+  beendet?: string
+  meldung: string | null
+  sicherung_vorher?: string
+}
+
+export interface BackupsResponse {
+  sicherungen: BackupFile[]
+  wiederherstellung: RestoreState | null
+  laeuft: boolean
+}
+
+export interface UploadResult {
+  datei: string
+  original: string
+  groesse_bytes: number
+  grafana: boolean
+  beschreibung: { version?: string; erstellt?: string } | null
+}

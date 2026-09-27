@@ -1,6 +1,6 @@
 # Architektur
 
-> Beschreibt den **tatsächlichen** Stand (Meilenstein M1). Das Zielbild steht im
+> Beschreibt den **tatsächlichen** Stand (Version 0.4.0: M0, M1, M2, MCP). Das Zielbild steht im
 > [Umsetzungsplan](umsetzungsplan.md).
 
 ## Zweck und Abgrenzung
@@ -37,7 +37,7 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 
 | Dienst (s6) | Typ | Hängt ab von | Verantwortung |
 |---|---|---|---|
-| `init-env` | oneshot | `base` | Protokollstufe und `ingress_entry` ermitteln, als Umgebung für alle Dienste ablegen |
+| `init-env` | oneshot | `base` | Protokollstufe und `ingress_entry` ermitteln, als Umgebung ablegen; interne Zugangsdaten erzeugen; Wiederherstellung aus HA-Backup erkennen (D-023) |
 | `init-postgres` | oneshot | `init-env` | Cluster unter `/data/pgdata` anlegen (erster Start), Laufzeitkonfiguration schreiben, Hauptversion prüfen, Grundobjekte sicherstellen (`bootstrap.sql`, Extension anlegen und aktualisieren) |
 | `postgres` | longrun | `init-postgres` | Datenbank; Stopp per `SIGINT` (fast shutdown) |
 | `init-grafana` | oneshot | `init-env` | `grafana.ini` schreiben, Admin-Passwort setzen (D-011) |
@@ -61,7 +61,8 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 | `sensor_service.py` | Sensorliste prüfen, ändern, protokollieren | den Collector direkt ansprechen (das macht der Trigger) |
 | `health.py`, `display_time.py` | Dienstprüfungen, Anzeigezeit | – |
 | `mcp_server.py`, `mcp_tools.py` | eigener Prozess: MCP-Protokoll und Token-Prüfung bzw. Fachlogik der Werkzeuge | – |
-| `backup.py`, `grafana_client.py` | `pg_dump`-Sicherungen unter `/data/backup`; Grafana-HTTP-API über den Auth-Proxy | – |
+| `backup.py` | Sicherungen, Download-Paket, Prüfung hochgeladener Dateien, Wiederherstellung als Hintergrundauftrag ([backup-restore.md](backup-restore.md)) | – |
+| `grafana_client.py` | Grafana-HTTP-API über den Auth-Proxy | – |
 
 ### Ablauf der Aufzeichnung
 
@@ -94,9 +95,9 @@ Konfigurationsdateien entstehen bei **jedem** Start aus den Vorlagen in
 
 | Pfad | Inhalt | Im HA-Backup |
 |---|---|---|
-| `/data/pgdata` | PostgreSQL-Cluster | ja (M2 ersetzt das durch einen Dump, siehe Plan) |
+| `/data/pgdata` | PostgreSQL-Cluster | nein – stattdessen Dump (D-023) |
 | `/data/migrations` | Anlagen-Migrationen (optional) | ja |
-| `/data/backup` | Sicherungen (`pg_dump`) | ja |
+| `/data/backup` | Sicherungen (`pg_dump`), Zustand der letzten Wiederherstellung | nur `ha_snapshot*` (D-023) |
 | `/data/secrets` | intern erzeugte Zugangsdaten (Grafana-Datenquelle) | ja |
 | `/data/grafana` | Grafana-Datenbank (SQLite), Plugins, Protokolle | ja |
 | `/data/options.json` | Add-on-Optionen, vom Supervisor geschrieben, nur gelesen | ja |
@@ -109,3 +110,8 @@ Konfigurationsdateien entstehen bei **jedem** Start aus den Vorlagen in
 Fehlt `SUPERVISOR_TOKEN`, läuft der Container im Testmodus (D-013): `ingress_entry` kommt aus
 `SKYTECH_INGRESS_ENTRY` (Voreinstellung `/api/hassio_ingress/lokaltest`), der Ingress-Port ist
 nicht auf den Supervisor beschränkt. Ablauf in [test-strategie.md](test-strategie.md).
+
+## Sicherung
+
+HA-Hooks `backup_pre`/`backup_post` (`/usr/bin/skytech-backup-*`), Einspielen über
+`/usr/lib/skytech/restore-db.sh`, Ablauf in [backup-restore.md](backup-restore.md).

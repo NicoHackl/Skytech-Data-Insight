@@ -1,4 +1,6 @@
-import type { Catalog, HaEntity, Sensor, SensorDraft, SensorFieldsValue, StatusResponse } from './types'
+import type {
+  BackupFile, BackupsResponse, Catalog, HaEntity, Sensor, SensorDraft, SensorFieldsValue, StatusResponse, UploadResult,
+} from './types'
 
 /* Einziger Ort im Frontend, an dem fetch aufgerufen wird. Basis-Pfad, Header und
    Fehlerbehandlung liegen damit an genau einer Stelle.
@@ -21,7 +23,7 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
-  if (options.body) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof Blob)) headers.set('Content-Type', 'application/json')
   const response = await fetch(`api${path}`, { ...options, headers })
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const body: unknown = isJson ? await response.json() : await response.text()
@@ -50,7 +52,29 @@ export const api = {
     request<{ ok: boolean }>(`/sensors/${id}`, { method: 'PUT', body: JSON.stringify(changes) }),
   deleteSensor: (id: number) => request<{ ok: boolean }>(`/sensors/${id}`, { method: 'DELETE' }),
   haEntities: () => request<{ entities: HaEntity[] }>('/ha/entities').then((body) => body.entities),
+
+  /* Sicherungen (M2). Downloads laufen als normale Links (BACKUP_*_PATH),
+     damit der Browser große Dateien selbst speichert. */
+  backups: () => request<BackupsResponse>('/backups'),
+  createBackup: () => request<BackupFile>('/backups', { method: 'POST' }),
+  deleteBackup: (name: string) => request<{ ok: boolean }>(`/backups/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  uploadBackup: (file: File) =>
+    request<UploadResult>(`/backups/upload?name=${encodeURIComponent(file.name)}`, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': 'application/octet-stream' },
+    }),
+  restoreBackup: (name: string) =>
+    request<{ ok: boolean }>(`/backups/${encodeURIComponent(name)}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ bestaetigung: 'WIEDERHERSTELLEN' }),
+    }),
 }
+
+/** Download des Komplettpakets (Datenbank + Grafana). */
+export const BACKUP_ARCHIVE_PATH = 'api/backups/download'
+/** Download einer einzelnen Sicherung. */
+export const backupFilePath = (name: string) => `api/backups/${encodeURIComponent(name)}`
 
 /** Relativer Verweis auf Grafana im selben Ingress (D-006). */
 export const GRAFANA_PATH = 'grafana/'

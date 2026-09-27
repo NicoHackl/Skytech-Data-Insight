@@ -1,0 +1,31 @@
+#!/command/with-contenv bashio
+# Vom Supervisor vor jedem HA-Backup im Container ausgeführt (config.yaml: backup_pre).
+# Schreibt einen konsistenten Dump der Datenbank und eine Online-Kopie der
+# Grafana-Datenbank nach /data/backup. Das Rohverzeichnis /data/pgdata ist vom
+# Backup ausgeschlossen (backup_exclude) – eine laufende Datenbank lässt sich
+# nicht verlässlich als Dateien sichern (D-023).
+set -e
+readonly target_dir="/data/backup"
+install -d -o postgres -g postgres -m 750 "${target_dir}"
+
+bashio::log.info "HA-Backup: sichere Datenbank …"
+# pg_dump meldet bei TimescaleDB harmlose Hinweise zu zirkulären Fremdschlüsseln
+# im internen Katalog; sie erscheinen nur, wenn die Sicherung scheitert.
+if ! s6-setuidgid postgres pg_dump --format=custom --no-password --host=/run/postgresql --username=postgres \
+        --file="${target_dir}/ha_snapshot.dump.tmp" skytech 2> /run/skytech/backup-pre.log; then
+    cat /run/skytech/backup-pre.log
+    rm -f "${target_dir}/ha_snapshot.dump.tmp"
+    bashio::exit.nok "HA-Backup: Sicherung der Datenbank fehlgeschlagen."
+fi
+mv "${target_dir}/ha_snapshot.dump.tmp" "${target_dir}/ha_snapshot.dump"
+
+if [[ -f /data/grafana/grafana.db ]]; then
+    /opt/venv/bin/python3 -c "
+import sqlite3, sys
+source = sqlite3.connect('file:/data/grafana/grafana.db?mode=ro', uri=True)
+target = sqlite3.connect(sys.argv[1])
+source.backup(target)
+target.close(); source.close()
+" "${target_dir}/ha_snapshot_grafana.db"
+fi
+bashio::log.info "HA-Backup: Datenbank gesichert ($(du -h "${target_dir}/ha_snapshot.dump" | cut -f1))."

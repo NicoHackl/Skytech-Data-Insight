@@ -41,7 +41,10 @@ class FakeHomeAssistant:
         self.subscribed.clear()
 
     async def send_state(self, new_state):
-        for websocket in self.connections:
+        for websocket in list(self.connections):
+            if websocket.closed:
+                self.connections.remove(websocket)
+                continue
             await websocket.send_json({
                 "id": self.subscription_id,
                 "type": "event",

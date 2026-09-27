@@ -41,7 +41,7 @@ Als „Remote MCP Server" mit URL und Header eintragen. Clients ohne Header-Unte
 | `sql_abfrage` | lesen | SQL in schreibgeschützter Transaktion, 30 s Zeitlimit, bis 5 000 Zeilen |
 | `statistik` | lesen | Größe, Einstellungen, je Sensor Anzahl und Zeitraum |
 | `sensoren_auflisten`, `katalog_anzeigen` | lesen | Sensorliste; Kategorien, Größen, Anlagen, Paare |
-| `backups_auflisten` | lesen | Sicherungen unter `/data/backup` |
+| `backups_auflisten` | lesen | Sicherungen unter `/data/backup` ([backup-restore.md](backup-restore.md)) |
 | `grafana_datenquellen`, `grafana_dashboards_auflisten`, `grafana_dashboard_lesen` | lesen | Grafana |
 | `sql_ausfuehren` | schreiben | beliebiges SQL in einer Transaktion |
 | `migration_anlegen` | schreiben | dauerhafte Schemaänderung als `/data/migrations/1NNN_name.sql`; scheitert sie, bleibt nichts zurück |

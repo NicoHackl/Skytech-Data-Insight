@@ -659,6 +659,12 @@ table.data tbody tr:hover { background: var(--surface-2); cursor: pointer; }
 
 .table-switch { margin-bottom: 0; }
 
+/* Sicherungen */
+table.data.static-rows tbody tr:hover { cursor: default; }
+.upload-result { margin-top: 16px; }
+.upload-actions { margin-top: 14px; }
+.info-strip .spinner { width: 16px; height: 16px; border-width: 2px; }
+
 @media (max-width: 620px) {
   .pick-row { padding: 10px 14px; flex-wrap: wrap; }
   .pick-attributes { padding-left: 20px; }

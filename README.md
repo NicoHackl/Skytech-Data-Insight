@@ -4,9 +4,10 @@ Home-Assistant-Add-on der Skytech-Produktfamilie für die Langzeitablage und Aus
 Energiedaten: **TimescaleDB** (PostgreSQL) für Leistungs-, Energie- und Soll/Ist-Werte,
 **Grafana** für Dashboards, Verwaltung über ein eigenes Web-UI im HA-Seitenmenü.
 
-> **Stand: Meilenstein M1** — Aufzeichnung ausgewählter HA-Werte mit Minutenwerten und
-> Verdichtungen, Sensorverwaltung, Datenbankzugang aus dem LAN, Grafana.
-> Backup-Funktionen, Altdaten-Import, fertige Dashboards und MCP folgen, siehe
+> **Stand: Version 0.4.0** — Aufzeichnung ausgewählter HA-Werte mit Minutenwerten und
+> Verdichtungen, Sensorverwaltung, Datenbankzugang aus dem LAN, Grafana mit Datenquelle,
+> MCP-Server für LLMs, Sicherung und Wiederherstellung (HA-Backup und Download).
+> Altdaten-Import und fertige Startdashboards folgen, siehe
 > [docs/roadmap.md](docs/roadmap.md) und den [Umsetzungsplan](docs/umsetzungsplan.md).
 
 ## Installation

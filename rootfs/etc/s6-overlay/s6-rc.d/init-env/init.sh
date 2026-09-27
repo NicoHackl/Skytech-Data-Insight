@@ -30,4 +30,21 @@ if [[ ! -s /data/secrets/grafana_db_password ]]; then
     (umask 077 && head -c 32 /dev/urandom | base64 | tr -d '\n/+=' > /data/secrets/grafana_db_password)
 fi
 
+# Wiederherstellung aus einem HA-Backup erkennen (D-023): das Backup enthält
+# den Dump, aber kein Datenbankverzeichnis. Grafana bekommt dann seine
+# konsistente Kopie zurück, die Datenbank spielt init-postgres ein.
+if [[ -s /data/backup/ha_snapshot.dump ]]; then
+    if [[ ! -s /data/pgdata/PG_VERSION ]]; then
+        bashio::log.info "Wiederherstellung aus einem Home-Assistant-Backup erkannt."
+        touch "${SKYTECH_RUN_DIR}/ha_restore"
+        if [[ -s /data/backup/ha_snapshot_grafana.db ]]; then
+            install -d /data/grafana
+            cp /data/backup/ha_snapshot_grafana.db /data/grafana/grafana.db
+        fi
+    else
+        # Überbleibsel eines Backups, dessen Nacharbeit nicht lief.
+        rm -f /data/backup/ha_snapshot.dump /data/backup/ha_snapshot_grafana.db
+    fi
+fi
+
 bashio::log.info "Skytech Data Insight ${SKYTECH_VERSION:-dev} startet."

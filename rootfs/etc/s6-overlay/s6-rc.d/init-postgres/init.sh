@@ -75,6 +75,17 @@ fi
 if [[ "${bootstrap_ok}" == true ]]; then
     psql_run --dbname=skytech --file=/usr/share/skytech/bootstrap_skytech.sql || bootstrap_ok=false
 fi
+# Nach einer HA-Wiederherstellung den Dump aus dem Backup einspielen (init-env).
+if [[ "${bootstrap_ok}" == true ]] && [[ -f "${SKYTECH_RUN_DIR}/ha_restore" ]]; then
+    if /usr/lib/skytech/restore-db.sh /data/backup/ha_snapshot.dump; then
+        stamp=$(date -u +%Y%m%d_%H%M%S)
+        mv /data/backup/ha_snapshot.dump "/data/backup/ha_wiederhergestellt_${stamp}.dump"
+        rm -f /data/backup/ha_snapshot_grafana.db "${SKYTECH_RUN_DIR}/ha_restore"
+    else
+        bootstrap_ok=false
+        bashio::log.error "Der Dump bleibt unter /data/backup/ha_snapshot.dump für einen weiteren Versuch liegen."
+    fi
+fi
 
 s6-setuidgid postgres "${PGBIN}/pg_ctl" --pgdata="${PGDATA}" --mode=fast --wait stop > /dev/null
 

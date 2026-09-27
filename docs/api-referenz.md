@@ -73,6 +73,21 @@ Alle HA-Entitäten aus dem Zustandsabbild des Collectors, je Entität mit `name`
 `vorschlag` (vorbefüllter Sensor) und `attribute` (nur Attribute mit Zahlenwert, je mit `erfasst`
 und `vorschlag`). `503` ohne HA-Verbindung.
 
+## Sicherungen (M2)
+
+| Aufruf | Wirkung |
+|---|---|
+| `GET api/backups` | `{sicherungen: [{datei, art, art_text, groesse_bytes, erstellt, erstellt_iso}], wiederherstellung, laeuft}` – `wiederherstellung` ist der Zustand der letzten Wiederherstellung (`laeuft`, `erfolgreich`, `fehlgeschlagen`, `unklar`) |
+| `POST api/backups` | Sicherung sofort anlegen (`manuell_*.dump`), `201` |
+| `GET api/backups/download` | Komplettpaket `.tar` (Dump, Grafana, `sicherung.json`) |
+| `GET api/backups/{datei}` | einzelne Sicherung herunterladen |
+| `DELETE api/backups/{datei}` | Sicherung löschen |
+| `PUT api/backups/upload?name=<original>` | Datei als Rohdaten im Body; wird geprüft und als `upload_*` abgelegt. `201` mit Beschreibung, `422` bei ungültiger Datei |
+| `POST api/backups/{datei}/restore` | Body `{"bestaetigung": "WIEDERHERSTELLEN"}`; startet die Wiederherstellung im Hintergrund (`202`). Der Dienst startet danach neu – Ergebnis über `GET api/backups` |
+
+Dateinamen werden nur akzeptiert, wenn sie dem Muster `<art>_<JJJJMMTT>_<hhmmss>[_n].(dump|tar)`
+entsprechen – Pfade sind ausgeschlossen.
+
 ## Statische Auslieferung
 
 | Pfad | Inhalt |

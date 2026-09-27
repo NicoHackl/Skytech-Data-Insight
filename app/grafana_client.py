@@ -5,6 +5,7 @@ Angemeldet wird über den Auth-Proxy (D-006): Grafana vertraut dem Header
 Benutzer `skytech-mcp` wird beim ersten Aufruf automatisch angelegt.
 """
 
+import asyncio
 import os
 from typing import Any
 
@@ -38,8 +39,8 @@ class GrafanaClient:
                     message = body.get("message") if isinstance(body, dict) else None
                     raise GrafanaError(f"Grafana antwortet {response.status}: {message or body}")
                 return body
-        except aiohttp.ClientError as exc:
-            raise GrafanaError(f"Grafana nicht erreichbar: {exc}") from exc
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            raise GrafanaError(f"Grafana nicht erreichbar (startet eventuell gerade): {exc}") from exc
 
     async def datasources(self) -> list[dict]:
         return await self._request("GET", "/datasources")

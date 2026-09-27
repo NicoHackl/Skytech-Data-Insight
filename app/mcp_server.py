@@ -23,7 +23,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 import database
-from grafana_client import GrafanaClient
+from grafana_client import GrafanaClient, GrafanaError
 from mcp_tools import McpTools, ToolError
 
 log = logging.getLogger("skytech.mcp")
@@ -79,7 +79,7 @@ def build_server(tools: McpTools) -> MCPServer:
     async def run(coroutine) -> str:
         try:
             return _text(await coroutine)
-        except ToolError as exc:
+        except (ToolError, GrafanaError) as exc:
             # Als Text zurück, damit das Modell die Ursache sieht und korrigieren kann.
             return _text({"fehler": str(exc)})
 

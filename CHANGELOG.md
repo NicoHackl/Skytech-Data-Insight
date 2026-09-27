@@ -8,6 +8,25 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt (Meilenstein M2, Version 0.4.0)
+
+- **Daten im Home-Assistant-Backup, richtig gesichert.** Vor jedem HA-Backup legt das Add-on einen
+  Datenbank-Dump und eine konsistente Kopie der Grafana-Datenbank an; das Datenbankverzeichnis
+  selbst und die lokalen Sicherungen sind ausgeschlossen. Nach dem Wiederherstellen eines
+  HA-Backups spielt das Add-on den Dump beim Start automatisch ein und lädt die Lücke aus dem
+  HA-Verlauf nach (D-023).
+- **Seite „Sicherungen".** Komplettsicherung (Datenbank und Grafana-Dashboards) als `.tar`
+  herunterladen; `.tar` oder `.dump` hochladen, prüfen lassen und nach Bestätigung einspielen –
+  vorher wird der aktuelle Stand gesichert, Aufzeichnung und MCP-Server starten dabei kurz neu
+  (D-024). Liste der lokalen Sicherungen mit Herunterladen, Einspielen, Löschen und „Jetzt sichern".
+- Aufbewahrung lokaler Sicherungen je Art (z. B. 20 vor MCP-Änderungen, 5 hochgeladene).
+
+### Behoben
+
+- MCP-Werkzeuge für Grafana melden einen nicht erreichbaren Grafana (z. B. während eines
+  Neustarts) jetzt als verständlichen Fehler statt als interne Ausnahme.
+
+
 ### Hinzugefügt (Version 0.3.0, MCP vorgezogen)
 
 - **MCP-Server für LLMs** (Port 8765, `http://<ha>:8765/mcp`, Anmeldung mit der neuen Option

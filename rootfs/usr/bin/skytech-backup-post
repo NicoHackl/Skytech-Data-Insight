@@ -1,0 +1,5 @@
+#!/command/with-contenv bashio
+# Vom Supervisor nach jedem HA-Backup ausgeführt (config.yaml: backup_post).
+# Der Dump liegt jetzt im HA-Backup; im laufenden Add-on wird er nicht gebraucht.
+rm -f /data/backup/ha_snapshot.dump /data/backup/ha_snapshot_grafana.db
+bashio::log.info "HA-Backup abgeschlossen."

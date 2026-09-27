@@ -112,6 +112,7 @@ Seitenwechsel nicht neu montiert werden.
     <Route path="/sensoren" element={<Sensoren />} />
     <Route path="/sensoren/neu" element={<SensorenNeu />} />
     <Route path="/sensoren/:id" element={<SensorBearbeiten />} />
+    <Route path="/sicherungen" element={<Sicherungen />} />
     <Route path="*" element={<div className="content"><div className="empty">Seite nicht gefunden.</div></div>} />
   </Route>
 </Routes>

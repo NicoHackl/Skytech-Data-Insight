@@ -24,6 +24,11 @@ Ingress-Panel sehen.
 - Keine Secrets in Vorlagen, erzeugten Konfigurationsdateien, Logs oder im Repo.
 - Das Grafana-Passwort gelangt nur per Standardeingabe an `grafana cli`, die Datenbank-Passwörter
   nur über die Umgebung eines einzelnen `psql`-Aufrufs.
+- Sicherungen enthalten **alle** aufgezeichneten Daten und die Grafana-Datenbank (inklusive
+  Grafana-Benutzer). Download und Einspielen sind nur über den Ingress möglich (HA-Administratoren);
+  heruntergeladene Pakete entsprechend aufbewahren.
+- Beim Einspielen werden nur die bekannten Einträge eines Pakets als Dateien gelesen – Pfade im
+  Archiv werden nie ausgepackt.
 - Das Änderungsprotokoll speichert den HA-Benutzernamen zu jeder Änderung an der Sensorliste.
 
 ## Externe Dienste

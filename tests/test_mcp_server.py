@@ -27,6 +27,10 @@ class FakeTools:
     def list_backups(self):
         return []
 
+    async def grafana_datasources(self):
+        from grafana_client import GrafanaError
+        raise GrafanaError("Grafana nicht erreichbar")
+
 
 @pytest.fixture
 async def server_url(unused_tcp_port):
@@ -86,3 +90,10 @@ async def test_tool_call_and_error_text(server_url):
     assert tools.calls == [("query", "SELECT 1", 5)]
     status, body = await rpc(url, "tools/call", {"name": "sql_ausfuehren", "arguments": {"sql": "x", "begruendung": "y"}})
     assert json.loads(body["result"]["content"][0]["text"]) == {"fehler": "absichtlich fehlgeschlagen"}
+
+
+async def test_grafana_error_is_reported_as_text(server_url):
+    url, _ = server_url
+    status, body = await rpc(url, "tools/call", {"name": "grafana_datenquellen", "arguments": {}})
+    assert status == 200
+    assert json.loads(body["result"]["content"][0]["text"]) == {"fehler": "Grafana nicht erreichbar"}

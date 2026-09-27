@@ -47,7 +47,7 @@ jobs:
       - name: ShellCheck (Init- und Dienstskripte)
         run: |
           shellcheck --shell=bash --exclude=SC1008,SC1091,SC2154 \
-            rootfs/usr/lib/skytech/*.sh \
+            rootfs/usr/lib/skytech/*.sh rootfs/usr/bin/skytech-* \
             rootfs/etc/s6-overlay/s6-rc.d/*/init.sh \
             rootfs/etc/s6-overlay/s6-rc.d/*/run
 
@@ -118,6 +118,13 @@ jobs:
           curl -fsS $MCP_HEADERS -H 'Authorization: Bearer ci-token-0123456789' \
             -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"grafana_datenquellen","arguments":{}}}' \
             http://127.0.0.1:18765/mcp | jq -e '.result.content[0].text | fromjson | .[0].uid == "skytech-db"'
+          # Sicherung: anlegen, Komplettpaket laden, HA-Backup-Hook ausführen.
+          curl -fsS -X POST http://127.0.0.1:18099/api/backups | jq -e '.art == "manuell"'
+          curl -fsS -o paket.tar http://127.0.0.1:18099/api/backups/download
+          tar tf paket.tar | grep -qx datenbank.dump
+          docker exec sdi-ci /usr/bin/skytech-backup-pre
+          docker exec sdi-ci test -s /data/backup/ha_snapshot.dump
+          docker exec sdi-ci /usr/bin/skytech-backup-post
 
       - name: Protokoll bei Fehler
         if: failure()

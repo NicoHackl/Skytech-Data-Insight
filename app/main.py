@@ -17,12 +17,13 @@ import aiohttp
 import asyncpg
 from aiohttp import web
 
+import backup
 import database
 import health
 import migration_runner
 import sensor_service
 from collector import Collector
-from display_time import format_berlin
+from display_time import BERLIN, format_berlin
 from ha_client import HAClient, connection_settings
 from suggestions import suggest
 from values import is_numeric_attribute
@@ -73,6 +74,7 @@ class AdminService:
         self.ha: HAClient | None = None
         self.startup_error: str | None = None
         self._tasks: list[asyncio.Task] = []
+        self.restorer = backup.Restorer()
 
     # ------------------------------------------------------------------
     # Lebenszyklus
@@ -116,6 +118,7 @@ class AdminService:
                 if applied:
                     log.info("%d Migration(en) angewendet.", len(applied))
                 await connection.execute("SELECT skytech_config.aufbewahrung_anwenden()")
+                await self._log_finished_restore(connection)
             self.collector = Collector(self.app_pool, self.collector_pool)
             await self.collector.start()
         except (migration_runner.MigrationError, asyncpg.PostgresError, OSError, asyncio.TimeoutError) as exc:
@@ -131,6 +134,15 @@ class AdminService:
         self.ha = HAClient(url, token, self.collector.on_state_changed, self.collector.on_connected)
         self.collector.ha = self.ha
         self._tasks.append(asyncio.create_task(self.ha.run(), name="ha-client"))
+
+    @staticmethod
+    async def _log_finished_restore(connection: asyncpg.Connection) -> None:
+        """Nach dem Neustart: eine gerade beendete Wiederherstellung ins (neue) Protokoll schreiben."""
+        state = backup.read_state()
+        if not state or state.get("protokolliert") or state.get("status") == "laeuft":
+            return
+        await sensor_service.log_change(connection, state.get("benutzer"), "sicherung_wiederhergestellt", state)
+        backup.write_state({**state, "protokolliert": True})
 
     # ------------------------------------------------------------------
     # Routen
@@ -284,6 +296,119 @@ class AdminService:
             })
         return json_response({"entities": entities})
 
+    # ------------------------------------------------------------------
+    # Sicherungen (M2)
+    # ------------------------------------------------------------------
+
+    async def handle_backups(self, _request: web.Request) -> web.Response:
+        state = backup.read_state()
+        if state and state.get("status") == "laeuft" and not self.restorer.busy:
+            # Der Prozess wurde während einer Wiederherstellung neu gestartet.
+            state = {**state, "status": "unklar",
+                     "meldung": "Der Dienst wurde während der Wiederherstellung neu gestartet – Ergebnis prüfen."}
+        return json_response({"sicherungen": [item.to_json() for item in backup.list_backups()],
+                              "wiederherstellung": state, "laeuft": self.restorer.busy})
+
+    async def handle_create_backup(self, request: web.Request) -> web.Response:
+        try:
+            created = await backup.create("manuell")
+        except backup.BackupError as exc:
+            return error_response(str(exc), 500)
+        await self._log(request, "sicherung_erstellt", {"datei": created.name})
+        return json_response(created.to_json(), status=201)
+
+    async def handle_download_archive(self, request: web.Request) -> web.StreamResponse:
+        """Komplettpaket (Datenbank + Grafana) als .tar – wird nach dem Senden gelöscht."""
+        try:
+            archive = await backup.build_archive(self._version)
+        except backup.BackupError as exc:
+            return error_response(str(exc), 500)
+        stamp = datetime.now(BERLIN).strftime("%Y-%m-%d_%H%M")
+        response = web.StreamResponse(headers={
+            "Content-Type": "application/x-tar",
+            "Content-Disposition": f'attachment; filename="skytech-data-insight_{stamp}.tar"',
+            "Content-Length": str(archive.stat().st_size),
+        })
+        try:
+            await response.prepare(request)
+            with archive.open("rb") as handle:
+                while chunk := handle.read(1024 * 1024):
+                    await response.write(chunk)
+            await response.write_eof()
+        finally:
+            archive.unlink(missing_ok=True)
+        await self._log(request, "sicherung_heruntergeladen", {})
+        return response
+
+    async def handle_download_file(self, request: web.Request) -> web.StreamResponse:
+        try:
+            path = backup.resolve(request.match_info["name"])
+        except backup.BackupError as exc:
+            return error_response(str(exc), 404)
+        return web.FileResponse(path, headers={"Content-Disposition": f'attachment; filename="{path.name}"'})
+
+    async def handle_delete_backup(self, request: web.Request) -> web.Response:
+        try:
+            path = backup.resolve(request.match_info["name"])
+        except backup.BackupError as exc:
+            return error_response(str(exc), 404)
+        path.unlink()
+        await self._log(request, "sicherung_geloescht", {"datei": path.name})
+        return json_response({"ok": True})
+
+    async def handle_upload(self, request: web.Request) -> web.Response:
+        """Nimmt eine Sicherung als Rohdaten entgegen (PUT, Body = Datei) und prüft sie."""
+        original = request.query.get("name", "")
+        suffix = ".tar" if original.lower().endswith(".tar") else ".dump"
+        backup.BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+        target = backup.BACKUP_DIR / f"upload_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}{suffix}"
+        try:
+            with target.open("wb") as handle:
+                async for chunk in request.content.iter_chunked(1024 * 1024):
+                    handle.write(chunk)
+            info = await backup.inspect(target)
+        except (backup.BackupError, OSError) as exc:
+            target.unlink(missing_ok=True)
+            return error_response(str(exc), 422)
+        backup.prune("upload")
+        return json_response({**info, "original": original}, status=201)
+
+    async def handle_restore(self, request: web.Request) -> web.Response:
+        body = await self._json_body(request)
+        if not isinstance(body, dict) or body.get("bestaetigung") != "WIEDERHERSTELLEN":
+            return error_response("Bestätigung fehlt.", 400)
+        try:
+            path = backup.resolve(request.match_info["name"])
+        except backup.BackupError as exc:
+            return error_response(str(exc), 404)
+        if self.restorer.busy:
+            return error_response("Es läuft bereits eine Wiederherstellung.", 409)
+        self._tasks.append(asyncio.create_task(self._restore(path, request_user(request)), name="restore"))
+        return json_response({"ok": True, "datei": path.name}, status=202)
+
+    async def _restore(self, path: Path, user: str | None) -> None:
+        async def stop_writers() -> None:
+            # Letzte Werte noch schreiben, dann alle Verbindungen zur alten Datenbank schließen.
+            if self.collector is not None:
+                await self.collector.stop()
+                self.collector = None
+            for pool in (self.collector_pool, self.app_pool):
+                if pool is not None:
+                    await pool.close()
+            self.app_pool = self.collector_pool = None
+
+        try:
+            await self.restorer.restore(path, user, stop_writers)
+        finally:
+            # Neustart immer – auch nach einem Fehler sind die Verbindungen geschlossen.
+            await backup.restart_services()
+
+    async def _log(self, request: web.Request, action: str, details: dict[str, Any]) -> None:
+        if self.app_pool is None:
+            return
+        async with self.app_pool.acquire() as connection:
+            await sensor_service.log_change(connection, request_user(request), action, details)
+
     @staticmethod
     async def _json_body(request: web.Request) -> Any:
         try:
@@ -304,6 +429,13 @@ class AdminService:
         app.router.add_put(r"/api/sensors/{sensor_id:\d+}", self.handle_update_sensor)
         app.router.add_delete(r"/api/sensors/{sensor_id:\d+}", self.handle_delete_sensor)
         app.router.add_get("/api/ha/entities", self.handle_entities)
+        app.router.add_get("/api/backups", self.handle_backups)
+        app.router.add_post("/api/backups", self.handle_create_backup)
+        app.router.add_get("/api/backups/download", self.handle_download_archive)
+        app.router.add_put("/api/backups/upload", self.handle_upload)
+        app.router.add_get("/api/backups/{name}", self.handle_download_file)
+        app.router.add_delete("/api/backups/{name}", self.handle_delete_backup)
+        app.router.add_post("/api/backups/{name}/restore", self.handle_restore)
         assets = _STATIC_DIR / "assets"
         if assets.is_dir():
             app.router.add_static("/assets/", assets, name="assets")
