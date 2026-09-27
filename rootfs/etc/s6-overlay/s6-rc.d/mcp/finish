@@ -1,0 +1,3 @@
+#!/bin/sh
+# Gemeinsame Auswertung des Dienstendes, siehe /usr/lib/skytech/finish.sh.
+exec /usr/lib/skytech/finish.sh mcp "$@"

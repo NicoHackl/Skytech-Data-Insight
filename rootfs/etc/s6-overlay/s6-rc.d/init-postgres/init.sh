@@ -9,6 +9,8 @@ readonly PGDATA="/data/pgdata"
 readonly PGRUN="${SKYTECH_RUN_DIR}/postgres"
 
 install -d -o postgres -g postgres -m 2775 /run/postgresql
+# Sicherungen (MCP, später M2) schreibt pg_dump als postgres.
+install -d -o postgres -g postgres -m 750 /data/backup
 install -d -o postgres -g postgres -m 755 "${PGRUN}"
 skytech::render postgresql.conf "${PGRUN}/skytech.conf" RUN_DIR="${PGRUN}"
 skytech::render pg_hba.conf "${PGRUN}/pg_hba.conf"
@@ -53,12 +55,14 @@ psql_run() {
     PGOPTIONS="-c client_min_messages=warning" \
         SKYTECH_DB_ADMIN_PASSWORD="${SKYTECH_DB_ADMIN_PASSWORD:-}" \
         SKYTECH_DB_READER_PASSWORD="${SKYTECH_DB_READER_PASSWORD:-}" \
+        SKYTECH_DB_GRAFANA_PASSWORD="${SKYTECH_DB_GRAFANA_PASSWORD:-}" \
         s6-setuidgid postgres "${PGBIN}/psql" --no-psqlrc --quiet --set=ON_ERROR_STOP=1 \
         --host=/run/postgresql --username=postgres "$@"
 }
 # Passwörter nur über die Umgebung dieses einen Aufrufs (\getenv in bootstrap.sql).
 SKYTECH_DB_ADMIN_PASSWORD=$(skytech::option db_password) \
 SKYTECH_DB_READER_PASSWORD=$(skytech::option db_readonly_password) \
+SKYTECH_DB_GRAFANA_PASSWORD=$(</data/secrets/grafana_db_password) \
     psql_run --dbname=postgres --file=/usr/share/skytech/bootstrap.sql || bootstrap_ok=false
 # Eigene Sitzung für das Update: TimescaleDB verlangt, dass ALTER EXTENSION
 # der erste Befehl nach dem Verbinden ist.

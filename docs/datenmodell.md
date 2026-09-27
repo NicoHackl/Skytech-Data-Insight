@@ -137,8 +137,9 @@ ORDER BY tag;
 |---|---|---|
 | `skytech_app` | Socket (`peer`, root) | Besitzer aller Objekte, Migrationen, Oberfläche |
 | `skytech_collector` | Socket (`peer`, root) | liest `sensor`, schreibt `messwert` und `messwert_1min` |
-| `skytech_admin` | LAN, Passwort `db_password` | Mitglied von `skytech_app`: alles lesen, schreiben, Schema ändern |
+| `skytech_admin` | LAN, Passwort `db_password`; Socket für den MCP-Server | Mitglied von `skytech_app`: alles lesen, schreiben, Schema ändern |
 | `skytech_reader` | LAN, Passwort `db_readonly_password` | lesen in `skytech` und `skytech_config` |
+| `skytech_grafana` | nur 127.0.0.1, erzeugtes Passwort | Mitglied von `skytech_reader`; Grafana-Datenquelle (D-022) |
 
 Nur Datenbank `skytech`; ohne gesetztes Passwort ist die LAN-Anmeldung gesperrt. Was
 `skytech_admin` neu anlegt, darf `skytech_reader` automatisch lesen. Zugang aus VSCode:

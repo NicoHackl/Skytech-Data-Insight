@@ -1,6 +1,6 @@
 # Sicherheit und Datenschutz
 
-## Zugänge (Stand M1)
+## Zugänge (Stand 0.3.0)
 
 | Zugang | Schutz |
 |---|---|
@@ -9,12 +9,14 @@
 | Grafana im LAN (3000) | Grafana-Login `admin`; der Anmeldeheader wird von nginx entfernt, ein gefälschter Header führt zu `401` (in der CI geprüft). Ohne gesetztes Passwort ist die Anmeldung gesperrt (D-011) |
 | PostgreSQL im Container | Verwaltungsdienst und Collector über den lokalen Socket mit `peer` (D-012), je Aufgabe eigene Rolle |
 | PostgreSQL im LAN (5432) | nur `skytech_admin`/`skytech_reader`, nur Datenbank `skytech`, nur mit Passwort (SCRAM); ohne Passwort gesperrt. Unverschlüsselt – nur im LAN nutzen |
+| MCP-Server (8765) | nur mit `mcp_token` (Bearer, Vergleich in konstanter Zeit); ohne Token aus. **Vollzugriff** auf Daten und Dashboards, deshalb Sicherung vor jeder Änderung und Protokoll, [mcp.md](mcp.md) |
+| Grafana-Datenquelle | interne Rolle `skytech_grafana` (nur lesen, nur 127.0.0.1), Passwort erzeugt in `/data/secrets` |
 | Home Assistant | WebSocket-API über den Supervisor mit dessen Token; das Add-on liest nur (Zustände, Verlauf) und schreibt nichts nach HA |
 
 Proxy-Benutzer bekommen in Grafana die Rolle `Admin`, weil nur HA-Administratoren das
 Ingress-Panel sehen.
 
-> **Wichtig:** Port 3000 und 5432 (und später 8765) nie per Portfreigabe ins Internet öffnen.
+> **Wichtig:** Port 3000, 5432 und 8765 nie per Portfreigabe ins Internet öffnen.
 > Fernzugriff nur über VPN.
 
 ## Secrets

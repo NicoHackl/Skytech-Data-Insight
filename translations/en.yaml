@@ -18,6 +18,13 @@ configuration:
     description: >-
       Password of the database user "skytech_reader" for read-only LAN access.
       Empty = login locked.
+  mcp_token:
+    name: MCP token
+    description: >-
+      Access key for the MCP server (port 8765) that lets an LLM such as Claude
+      or ChatGPT work with the database, sensors and Grafana dashboards. At least
+      16 random characters. Empty = MCP server off.
 network:
   3000/tcp: Grafana in the LAN
   5432/tcp: PostgreSQL in the LAN (VSCode)
+  8765/tcp: MCP server for LLMs

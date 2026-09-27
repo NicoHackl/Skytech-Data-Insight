@@ -31,6 +31,7 @@ Abweichungen in [bekannte-luecken.md](bekannte-luecken.md).
 | [datenmodell.md](datenmodell.md) | Tabellen, Sichten, Minutenwerte, Verdichtungen, Aufbewahrung, Migrationen, Rollen |
 | [datenbankzugang.md](datenbankzugang.md) | Zugang aus VSCode und anderen SQL-Werkzeugen |
 | [api-referenz.md](api-referenz.md) | HTTP-Endpunkte des Verwaltungsdienstes |
+| [mcp.md](mcp.md) | MCP-Server für LLMs: Einrichtung, Werkzeuge, Schutz |
 | [sicherheit-datenschutz.md](sicherheit-datenschutz.md) | Zugänge, Anmeldung, externe Dienste |
 | [bekannte-luecken.md](bekannte-luecken.md) | Offene Punkte, Stolpersteine |
 | [roadmap.md](roadmap.md) | Meilensteine und Umsetzungsstand |

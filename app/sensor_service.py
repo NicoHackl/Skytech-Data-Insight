@@ -103,10 +103,12 @@ def _translate(exc: asyncpg.PostgresError) -> ValidationError:
     return ValidationError(f"Datenbank lehnt die Änderung ab: {exc}")
 
 
-async def _log(connection: asyncpg.Connection, user: str | None, action: str, details: dict[str, Any]) -> None:
+async def log_change(connection: asyncpg.Connection, user: str | None, action: str, details: dict[str, Any],
+                     source: str = "ui") -> None:
+    """Schreibt einen Eintrag ins Änderungsprotokoll (Quelle `ui`, `mcp` oder `system`)."""
     await connection.execute(
-        "INSERT INTO skytech_config.aenderungsprotokoll (quelle, benutzer, aktion, details) VALUES ('ui', $1, $2, $3::jsonb)",
-        user, action, json.dumps(details, ensure_ascii=False, default=str),
+        "INSERT INTO skytech_config.aenderungsprotokoll (quelle, benutzer, aktion, details) VALUES ($1, $2, $3, $4::jsonb)",
+        source, user, action, json.dumps(details, ensure_ascii=False, default=str),
     )
 
 
@@ -127,7 +129,8 @@ async def catalog(connection: asyncpg.Connection) -> dict[str, Any]:
     }
 
 
-async def create_sensors(connection: asyncpg.Connection, items: list[dict[str, Any]], user: str | None) -> list[int]:
+async def create_sensors(connection: asyncpg.Connection, items: list[dict[str, Any]], user: str | None,
+                         source: str = "ui") -> list[int]:
     """Legt mehrere Sensoren in einer Transaktion an – ganz oder gar nicht."""
     if not items:
         raise ValidationError("Keine Sensoren übergeben.")
@@ -155,13 +158,14 @@ async def create_sensors(connection: asyncpg.Connection, items: list[dict[str, A
                         {f"{index}.{k}": v for k, v in error.field_errors.items()},
                     ) from exc
                 ids.append(sensor_id)
-            await _log(connection, user, "sensoren_angelegt", {"ids": ids, "sensoren": normalized})
+            await log_change(connection, user, "sensoren_angelegt", {"ids": ids, "sensoren": normalized}, source)
     except ValidationError:
         raise
     return ids
 
 
-async def update_sensor(connection: asyncpg.Connection, sensor_id: int, data: dict[str, Any], user: str | None) -> None:
+async def update_sensor(connection: asyncpg.Connection, sensor_id: int, data: dict[str, Any], user: str | None,
+                        source: str = "ui") -> None:
     changes = normalize(data, creating=False)
     if not changes:
         raise ValidationError("Keine Änderung übergeben.")
@@ -175,7 +179,7 @@ async def update_sensor(connection: asyncpg.Connection, sensor_id: int, data: di
             raise _translate(exc) from exc
         if result == "UPDATE 0":
             raise NotFoundError(sensor_id)
-        await _log(connection, user, "sensor_geaendert", {"id": sensor_id, "aenderungen": changes})
+        await log_change(connection, user, "sensor_geaendert", {"id": sensor_id, "aenderungen": changes}, source)
 
 
 async def delete_sensor(connection: asyncpg.Connection, sensor_id: int, user: str | None) -> None:
@@ -184,4 +188,4 @@ async def delete_sensor(connection: asyncpg.Connection, sensor_id: int, user: st
         row = await connection.fetchrow("DELETE FROM skytech.sensor WHERE id = $1 RETURNING entity_id, attribut, name", sensor_id)
         if row is None:
             raise NotFoundError(sensor_id)
-        await _log(connection, user, "sensor_geloescht", {"id": sensor_id, **dict(row)})
+        await log_change(connection, user, "sensor_geloescht", {"id": sensor_id, **dict(row)})

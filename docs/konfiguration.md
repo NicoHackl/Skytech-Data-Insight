@@ -12,6 +12,7 @@ Aufbewahrung in `skytech_config.einstellung` (siehe [datenmodell.md](datenmodell
 | `grafana_admin_password` | Passwort, optional | leer | Passwort des Grafana-Benutzers `admin` für die Anmeldung im LAN. Leer = bei jedem Start ein Zufallspasswort, LAN-Anmeldung damit gesperrt (D-011). Wird bei jedem Start gesetzt – eine Änderung wirkt nach dem Neustart des Add-ons |
 | `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart |
 | `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart |
+| `mcp_token` | Passwort, optional | leer | Token des MCP-Servers (mindestens 16 Zeichen). Leer = MCP-Server aus. [mcp.md](mcp.md) |
 
 ## Ports
 
@@ -22,7 +23,7 @@ Freigabe, Umlegen oder Abschalten im Abschnitt „Netzwerk" der Add-on-Seite (D-
 | `8099/tcp` | nur Ingress | Verwaltungsoberfläche und Grafana im HA-Seitenmenü | M0 |
 | `3000/tcp` | `3000` | Grafana im LAN: `http://<ha-adresse>:3000/` | M0 |
 | `5432/tcp` | `5432` | PostgreSQL im LAN, [datenbankzugang.md](datenbankzugang.md) | M1 |
-| `8765/tcp` | – | MCP-Server | M5 (geplant) |
+| `8765/tcp` | `8765` | MCP-Server, [mcp.md](mcp.md) | 0.3.0 |
 
 ## Umgebungsvariablen
 

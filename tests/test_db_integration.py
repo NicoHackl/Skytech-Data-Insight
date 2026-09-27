@@ -292,3 +292,74 @@ async def test_collector_end_to_end(clean, unused_tcp_port):
 
 async def _equals(awaitable, expected):
     return await awaitable == expected
+
+
+# ---------------------------------------------------------------------------
+# MCP-Werkzeuge (Sicherung durch Attrappe ersetzt – pg_dump braucht den Container)
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture(loop_scope="module")
+async def mcp_tools(clean, tmp_path, monkeypatch):
+    import backup
+    from mcp_tools import McpTools
+
+    made = []
+
+    async def fake_create(prefix, directory=None):
+        made.append(prefix)
+        return backup.BackupFile(f"{prefix}_test.dump", 1, datetime.now(timezone.utc))
+
+    monkeypatch.setattr(backup, "create", fake_create)
+    admin = await _pool("skytech_admin")
+    tools = McpTools(admin, grafana=None, site_dir=tmp_path / "migrations", backup_dir=tmp_path)
+    yield tools, made, clean[0]
+    await admin.close()
+
+
+async def test_mcp_query_is_read_only(mcp_tools):
+    from mcp_tools import ToolError
+    tools, made, _ = mcp_tools
+    result = await tools.query("SELECT schluessel FROM skytech.kategorie ORDER BY reihenfolge", max_rows=2)
+    assert result["zeilen"] == [["pv"], ["speicher"]] and result["abgeschnitten"] is True
+    with pytest.raises(ToolError, match="read-only"):
+        await tools.query("DELETE FROM skytech.kategorie")
+    assert made == []
+
+
+async def test_mcp_execute_backs_up_and_logs(mcp_tools):
+    tools, made, app_pool = mcp_tools
+    result = await tools.execute("INSERT INTO skytech.kategorie VALUES ('wallbox', 'Wallbox', 35)", "Wallbox ergänzen")
+    assert result["ergebnis"] == "INSERT 0 1" and made == ["mcp"]
+    async with app_pool.acquire() as connection:
+        entry = await connection.fetchrow(
+            "SELECT quelle, aktion, details->>'begruendung' AS grund FROM skytech_config.aenderungsprotokoll ORDER BY id DESC LIMIT 1")
+        await connection.execute("DELETE FROM skytech.kategorie WHERE schluessel = 'wallbox'")
+    assert (entry["quelle"], entry["aktion"], entry["grund"]) == ("mcp", "sql_ausgefuehrt", "Wallbox ergänzen")
+
+
+async def test_mcp_migration_success_and_rollback(mcp_tools):
+    from mcp_tools import ToolError
+    tools, _, app_pool = mcp_tools
+    result = await tools.create_migration("wallbox_ladevorgang",
+                                          "CREATE TABLE skytech.ladevorgang (beginn timestamptz PRIMARY KEY, kwh double precision);",
+                                          "Ladevorgänge der Wallbox")
+    assert result["datei"].startswith("1") and result["datei"].endswith("_wallbox_ladevorgang.sql")
+    async with app_pool.acquire() as connection:
+        owner = await connection.fetchval("SELECT tableowner FROM pg_tables WHERE tablename = 'ladevorgang'")
+    assert owner == "skytech_app"
+
+    with pytest.raises(ToolError, match="entfernt"):
+        await tools.create_migration("kaputt", "CREATE TABLE skytech.x (;", "Test")
+    names = [path.name for path in (tools._site_dir).iterdir()]
+    assert not any("kaputt" in name for name in names)
+
+
+async def test_mcp_schema_and_retention(mcp_tools):
+    tools, _, _ = mcp_tools
+    schema = await tools.schema("skytech")
+    kinds = {item["name"]: item["art"] for item in schema["objekte"]}
+    assert kinds["messwert_15min"] == "continuous_aggregate"
+    assert kinds["v_soll_ist"] == "view" and kinds["sensor"] == "tabelle"
+    result = await tools.set_retention(400, None)
+    assert result["rohwerte_tage"] == 400
+    await tools.set_retention(365, None)

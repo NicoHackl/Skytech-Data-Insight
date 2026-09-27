@@ -32,6 +32,7 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
   (172.30.32.2)                          └─/grafana/──► grafana 127.0.0.1:3001 ◄──┐
   LAN ─────────────────────► nginx :3000 ──<ingress_entry>/grafana/ ───────────────┘
   LAN (VSCode) ────────────► postgres :5432 (skytech_admin / skytech_reader, Passwort)
+  LAN (LLM) ───────────────► mcp :8765/mcp (Bearer-Token) ──socket──► postgres, ──auth-proxy──► grafana
 ```
 
 | Dienst (s6) | Typ | Hängt ab von | Verantwortung |
@@ -44,6 +45,7 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 | `app` | longrun | `init-env`, `postgres` | Verwaltungsdienst: Oberfläche und API, [api-referenz.md](api-referenz.md) |
 | `init-nginx` | oneshot | `init-env` | `nginx.conf` schreiben, Ingress-Port auf den Supervisor beschränken |
 | `nginx` | longrun | `init-nginx`, `app`, `grafana` | Eingang für Ingress und LAN |
+| `mcp` | longrun | `init-env`, `postgres` | MCP-Server (`app/mcp_server.py`), nur mit `mcp_token`, sonst Leerlauf; [mcp.md](mcp.md) |
 
 ## Verwaltungsdienst (`app/`)
 
@@ -58,6 +60,8 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 | `values.py`, `suggestions.py` | Umsetzung HA-Wert → Zahl/Text; Vorschläge für neue Sensoren | auf HA oder die Datenbank zugreifen |
 | `sensor_service.py` | Sensorliste prüfen, ändern, protokollieren | den Collector direkt ansprechen (das macht der Trigger) |
 | `health.py`, `display_time.py` | Dienstprüfungen, Anzeigezeit | – |
+| `mcp_server.py`, `mcp_tools.py` | eigener Prozess: MCP-Protokoll und Token-Prüfung bzw. Fachlogik der Werkzeuge | – |
+| `backup.py`, `grafana_client.py` | `pg_dump`-Sicherungen unter `/data/backup`; Grafana-HTTP-API über den Auth-Proxy | – |
 
 ### Ablauf der Aufzeichnung
 
@@ -92,6 +96,8 @@ Konfigurationsdateien entstehen bei **jedem** Start aus den Vorlagen in
 |---|---|---|
 | `/data/pgdata` | PostgreSQL-Cluster | ja (M2 ersetzt das durch einen Dump, siehe Plan) |
 | `/data/migrations` | Anlagen-Migrationen (optional) | ja |
+| `/data/backup` | Sicherungen (`pg_dump`) | ja |
+| `/data/secrets` | intern erzeugte Zugangsdaten (Grafana-Datenquelle) | ja |
 | `/data/grafana` | Grafana-Datenbank (SQLite), Plugins, Protokolle | ja |
 | `/data/options.json` | Add-on-Optionen, vom Supervisor geschrieben, nur gelesen | ja |
 | `/run/skytech/` | erzeugte Konfiguration (postgres, grafana, nginx) | nein, flüchtig |

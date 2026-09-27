@@ -1,0 +1,20 @@
+#!/command/with-contenv bashio
+# MCP-Server für LLMs (Port 8765). Läuft nur mit gesetztem mcp_token.
+# shellcheck source=/usr/lib/skytech/lib.sh
+source /usr/lib/skytech/lib.sh
+
+token=$(skytech::option mcp_token)
+if [[ ${#token} -lt 16 ]]; then
+    if [[ -n "${token}" ]]; then
+        bashio::log.warning "mcp_token ist kürzer als 16 Zeichen – MCP-Server bleibt aus."
+    else
+        bashio::log.info "Kein mcp_token gesetzt – MCP-Server bleibt aus."
+    fi
+    # Dienst bleibt „laufend", damit s6 ihn nicht ständig neu startet.
+    exec sleep infinity
+fi
+
+bashio::log.info "Starte MCP-Server …"
+cd /opt/skytech/app || bashio::exit.nok "Verzeichnis /opt/skytech/app fehlt."
+# Das Token nur über die Umgebung, nie über die Kommandozeile.
+SKYTECH_MCP_TOKEN="${token}" exec /opt/venv/bin/python3 mcp_server.py

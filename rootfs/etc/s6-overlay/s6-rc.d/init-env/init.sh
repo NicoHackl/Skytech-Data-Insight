@@ -23,4 +23,11 @@ install -d -m 755 "${SKYTECH_RUN_DIR}"
 skytech::export_env SKYTECH_INGRESS_ENTRY "${ingress_entry}"
 skytech::export_env SKYTECH_LOG_LEVEL "${log_level}"
 
+# Interne Zugangsdaten, die kein Mensch eingeben muss: einmal erzeugt, in
+# /data abgelegt (damit im Backup) und nie protokolliert.
+install -d -m 700 /data/secrets
+if [[ ! -s /data/secrets/grafana_db_password ]]; then
+    (umask 077 && head -c 32 /dev/urandom | base64 | tr -d '\n/+=' > /data/secrets/grafana_db_password)
+fi
+
 bashio::log.info "Skytech Data Insight ${SKYTECH_VERSION:-dev} startet."

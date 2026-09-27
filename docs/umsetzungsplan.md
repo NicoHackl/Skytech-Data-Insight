@@ -192,6 +192,8 @@ Grafana öffnet eingebettet unter `/grafana/` im selben Ingress.
 
 ## MCP-Server (voller Zugriff)
 
+> **Stand 0.3.0:** vorgezogen und umgesetzt (D-021); verbindliche Werkzeugliste in [mcp.md](mcp.md).
+
 Transport Streamable HTTP auf `:8765/mcp`, `Authorization: Bearer <mcp_token>`. Einbindung in
 Claude Desktop/Code bzw. GPT-Clients per URL + Token (Anleitung in `docs/mcp.md`).
 

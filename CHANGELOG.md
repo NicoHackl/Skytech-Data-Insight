@@ -8,6 +8,20 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt (Version 0.3.0, MCP vorgezogen)
+
+- **MCP-Server für LLMs** (Port 8765, `http://<ha>:8765/mcp`, Anmeldung mit der neuen Option
+  `mcp_token`): Werkzeuge zum Lesen (Schema, SQL, Statistik, Sensoren, Katalog, Sicherungen,
+  Grafana) und Schreiben (SQL, Migrationen, Sensoren, Aufbewahrung, Grafana-Dashboards). Vor jeder
+  schreibenden Datenbank-Aktion automatisch eine Sicherung (`pg_dump`, die letzten 20 bleiben),
+  jede Aktion im Änderungsprotokoll mit Quelle `mcp`. Einrichtung für Claude Code, Claude Desktop
+  und andere Clients in `docs/mcp.md` (D-021).
+- **Grafana-Datenquelle „Skytech DB"** wird automatisch eingerichtet (`uid: skytech-db`, nur lesend
+  über die interne Rolle `skytech_grafana`); Dashboards funktionieren damit ohne weitere
+  Einrichtung (D-022).
+- Anlagen-Migrationen über MCP werden ab Nummer 1000 angelegt.
+
+
 ### Hinzugefügt (Meilenstein M1, Version 0.2.0)
 
 - **Aufzeichnung von HA-Werten.** Das Add-on verbindet sich über den Supervisor mit der

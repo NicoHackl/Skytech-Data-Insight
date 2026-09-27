@@ -9,7 +9,7 @@ Meilensteine laut [Umsetzungsplan](umsetzungsplan.md#meilensteine).
 | M2 Backup | Dump vor HA-Backup, Auto-Restore, Download/Upload | offen |
 | M3 Verwaltungsoberfläche | Aufbewahrung, Backups, Zugänge, Migrationen, Protokoll (Sensoren bereits in M1) | offen |
 | M3b Altdaten-Import | Recorder und Langzeitstatistik | offen |
-| M4 Grafana | Datasource, Startdashboards | offen |
-| M5 MCP | Server, Werkzeuge, Protokoll | offen |
+| M4 Grafana | Datasource (vorgezogen in 0.3.0, D-022), Startdashboards | teilweise |
+| M5 MCP | Server, Werkzeuge, Protokoll, automatische Sicherung | **umgesetzt 27.09.2026** (vorgezogen, D-021) |
 | M6 Härtung & Release | Last, Restore-Probe, Release | offen |
 | M7 HEMS-Anbindung | Attribut-Sensor oder direktes Schreiben | später |

@@ -1,8 +1,9 @@
 """Verbindungen zur Datenbank.
 
-Zwei Pools mit getrennten Rollen (D-012, docs/datenmodell.md):
+Pools mit getrennten Rollen (D-012, D-020, docs/datenmodell.md):
 - `app`: Besitzer der Objekte – Migrationen, Sensorverwaltung, Status.
 - `collector`: darf nur Messwerte schreiben und Sensoren lesen.
+- `admin`: MCP-Server mit vollem Zugriff (eigener Prozess).
 
 Im Add-on geht alles über den Unix-Socket mit `peer`-Anmeldung. Für Tests
 lassen sich Host, Port und Passwort per Umgebung setzen.
@@ -15,6 +16,8 @@ import asyncpg
 DATABASE = "skytech"
 APP_ROLE = "skytech_app"
 COLLECTOR_ROLE = "skytech_collector"
+# MCP-Server: voller Zugriff (Mitglied von skytech_app).
+ADMIN_ROLE = "skytech_admin"
 
 
 def connection_options(role: str) -> dict:

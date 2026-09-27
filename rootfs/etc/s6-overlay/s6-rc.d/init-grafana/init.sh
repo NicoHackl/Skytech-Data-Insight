@@ -14,6 +14,9 @@ skytech::render grafana.ini "${GRAFANA_CONFIG}" \
     GRAFANA_LOG_LEVEL="$(case "${SKYTECH_LOG_LEVEL}" in debug) echo debug ;; error) echo error ;; *) echo warn ;; esac)"
 chmod 644 "${GRAFANA_CONFIG}"
 
+# Passwort der Datenquelle (skytech_grafana) für das Provisioning ($__file{…}).
+install -o grafana -g grafana -m 400 /data/secrets/grafana_db_password "${SKYTECH_RUN_DIR}/grafana/db_password"
+
 # Das Passwort gilt nur für die Anmeldung im LAN; über Ingress meldet der
 # Auth-Proxy an (D-006). Ohne gesetztes Passwort bekommt „admin" bei jedem
 # Start ein neues Zufallspasswort – die LAN-Anmeldung ist dann gesperrt,

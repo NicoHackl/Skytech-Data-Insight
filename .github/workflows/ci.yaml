@@ -96,8 +96,8 @@ jobs:
         run: |
           docker volume create sdi-ci
           docker run --rm -v sdi-ci:/data --entrypoint sh skytech-data-insight:ci \
-            -c 'echo "{\"log_level\":\"info\",\"grafana_admin_password\":\"ci-test\"}" > /data/options.json'
-          docker run -d --name sdi-ci -v sdi-ci:/data -p 18099:8099 -p 13000:3000 skytech-data-insight:ci
+            -c 'echo "{\"log_level\":\"info\",\"grafana_admin_password\":\"ci-test\",\"mcp_token\":\"ci-token-0123456789\"}" > /data/options.json'
+          docker run -d --name sdi-ci -v sdi-ci:/data -p 18099:8099 -p 13000:3000 -p 18765:8765 skytech-data-insight:ci
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[] | select(.key != "collector"); .is_ok) and any(.services[]; .key == "collector" and (.detail | test("Home Assistant")))' > /dev/null 2>&1; then
               echo "Alle Dienste gesund."; break
@@ -112,6 +112,12 @@ jobs:
           # Migrationen gelaufen, Kataloge befüllt, Sensor-API antwortet.
           curl -fsS http://127.0.0.1:18099/api/catalog | jq -e '.kategorien | length > 0'
           curl -fsS http://127.0.0.1:18099/api/sensors | jq -e '.sensors == []'
+          # MCP: ohne Token abgewiesen, mit Token Werkzeugliste; Grafana-Datenquelle bereitgestellt.
+          MCP_HEADERS='-H Content-Type:application/json -H Accept:application/json,text/event-stream -H MCP-Protocol-Version:2025-06-18'
+          test "$(curl -s -o /dev/null -w '%{http_code}' $MCP_HEADERS -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' http://127.0.0.1:18765/mcp)" = "401"
+          curl -fsS $MCP_HEADERS -H 'Authorization: Bearer ci-token-0123456789' \
+            -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"grafana_datenquellen","arguments":{}}}' \
+            http://127.0.0.1:18765/mcp | jq -e '.result.content[0].text | fromjson | .[0].uid == "skytech-db"'
 
       - name: Protokoll bei Fehler
         if: failure()

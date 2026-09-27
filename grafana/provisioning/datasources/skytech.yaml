@@ -1,0 +1,21 @@
+# Datenquelle „Skytech DB" – vom Add-on bereitgestellt, in Grafana nicht änderbar.
+# Rolle skytech_grafana liest wie skytech_reader; Passwort erzeugt init-env.
+apiVersion: 1
+datasources:
+  - name: Skytech DB
+    uid: skytech-db
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: 127.0.0.1:5432
+    user: skytech_grafana
+    isDefault: true
+    editable: false
+    jsonData:
+      database: skytech
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: true
+      maxOpenConns: 5
+      maxIdleConns: 2
+    secureJsonData:
+      password: $__file{/run/skytech/grafana/db_password}
