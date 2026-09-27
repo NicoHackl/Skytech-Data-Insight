@@ -8,6 +8,39 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt (Meilenstein M1, Version 0.2.0)
+
+- **Aufzeichnung von HA-Werten.** Das Add-on verbindet sich über den Supervisor mit der
+  WebSocket-API von Home Assistant und schreibt jede Änderung ausgewählter Entitäten – oder
+  einzelner Attribute – nach `skytech.messwert`. `on`/`off` wird zusätzlich als 1/0 gespeichert
+  (D-017). Geschrieben wird gebündelt alle 2 s; fällt die Datenbank kurz aus, bleiben die Werte im
+  Puffer. Nach einem Neustart oder Verbindungsabbruch lädt das Add-on die Lücke aus dem HA-Verlauf
+  nach (bis 10 Tage).
+- **Minutenwerte und Verdichtungen.** Je Minute ein zeitgewichtetes Mittel, Minimum, Maximum,
+  letzter Wert und bei Zählern der Zuwachs (mit Neustart-Erkennung), dazu 15-Minuten-, Stunden-
+  und Tageswerte (Berliner Kalendertag) als Continuous Aggregates (D-015). Rohwerte werden nach
+  7 Tagen komprimiert und standardmäßig nach 365 Tagen gelöscht, Verdichtungen bleiben.
+- **Sichten für SQL und Grafana:** `v_messwert*` je Stufe mit Stammdaten, `v_pv`, `v_speicher`,
+  `v_netz`, `v_heizung`, `v_verbraucher` und `v_soll_ist` (Paare über einen Paarnamen, D-016).
+- **Seite „Sensoren".** Liste mit Suche, Kategorie-Filter, letztem Wert und Schalter zum Pausieren;
+  „Sensoren hinzufügen" mit Suche über alle HA-Entitäten, Mehrfachauswahl, Attributen („Alle
+  Attribute übernehmen"), Vorschlägen aus Einheit/Geräteklasse und „Für alle setzen"; Bearbeiten
+  und Löschen. Vorgezogen aus M3 (D-019). Jede Änderung steht mit HA-Benutzer im Protokoll.
+- **Datenbankzugang aus dem LAN** (Port 5432) für VSCode & Co.: `skytech_admin` (Vollzugriff) und
+  `skytech_reader` (nur lesen) mit den neuen Optionen `db_password` und `db_readonly_password`;
+  ohne Passwort gesperrt (D-020). Die Übersicht zeigt die Verbindungsdaten.
+- **Übersicht** um die Aufzeichnung erweitert: Dienststatus, Sensoren, Werte pro Minute, letzte
+  Schreibung, Stand der Minutenwerte, Größe der Datenbank.
+- **Migrationen** aus `app/sql/` und optional `/data/migrations/`, mit Prüfsumme.
+- CI: Integrationstests gegen TimescaleDB 2.30.1 (Minutenwerte, Verdichtungen, Rechte, Collector
+  Ende-zu-Ende) und erweiterter Rauchtest.
+
+### Geändert (M1)
+
+- PostgreSQL lauscht jetzt auch im LAN (Anmeldung wie oben geregelt) und protokolliert ruhiger
+  (keine Hinweise, keine Checkpoints).
+- Die Oberfläche lädt nach einem Update immer die neue Fassung (`index.html` ohne Cache).
+
 ### Geändert
 
 - **Abhängigkeiten aktualisiert** (ersetzt die Dependabot-PRs #1–#10): React 19, React Router 7,

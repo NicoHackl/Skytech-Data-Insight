@@ -78,6 +78,10 @@ Icon-Set, API-Client, Hell/Dunkel-Schalter; `docs/`-Struktur, `.github/workflows
 
 ## Datenmodell (Schema `skytech`)
 
+> **Stand M1:** umgesetzt mit Abweichungen – verbindlich ist [datenmodell.md](datenmodell.md). Minutenwerte
+> sind eine eigene, zeitgewichtet berechnete Tabelle (D-015), Soll/Ist-Paare laufen über einen
+> Paarnamen (D-016), Kategorien und Größen sind Katalogtabellen (D-018), die Spalte `erfassung` entfällt.
+
 ```sql
 -- Stammdaten
 sensor (
@@ -224,7 +228,7 @@ docs/ (architektur, datenmodell, konfiguration, backup-restore, mcp, vscode-zugr
 2. **M1 Datenbank & Collector** — Schema, System-Migrationen, Rollen, Collector mit Batch/Pufferung/
    Lückennachladen, Continuous Aggregates, Retention/Kompression.
 3. **M2 Backup** — `backup_pre`/Auto-Restore, Download/Upload, Sicherheits-Dumps.
-4. **M3 Verwaltungsoberfläche** — alle Seiten, Sensorauswahl, Zugänge.
+4. **M3 Verwaltungsoberfläche** — alle übrigen Seiten, Zugänge (Sensorverwaltung vorgezogen in M1, D-019).
 5. **M3b Altdaten-Import** — Import-Seite, Recorder- und Statistik-Import, Neuberechnung Aggregate.
 6. **M4 Grafana** — Provisioning, Startdashboards, Auth-Proxy, LAN-Login.
 7. **M5 MCP** — Server, Werkzeuge, Protokoll, Doku für Claude/GPT.

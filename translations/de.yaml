@@ -8,5 +8,17 @@ configuration:
       Passwort des Grafana-Benutzers „admin" für die Anmeldung im LAN (Port 3000).
       Leer lassen, wenn Grafana nur über das HA-Seitenmenü genutzt wird – dann ist
       die LAN-Anmeldung gesperrt.
+  db_password:
+    name: Datenbank-Passwort (Vollzugriff)
+    description: >-
+      Passwort des Datenbankbenutzers „skytech_admin" für den Zugang aus dem LAN
+      (Port 5432, z. B. VSCode). Darf lesen, schreiben und das Schema ändern.
+      Leer = Anmeldung gesperrt.
+  db_readonly_password:
+    name: Datenbank-Passwort (nur lesen)
+    description: >-
+      Passwort des Datenbankbenutzers „skytech_reader" für lesenden Zugang aus
+      dem LAN. Leer = Anmeldung gesperrt.
 network:
   3000/tcp: Grafana im LAN
+  5432/tcp: PostgreSQL im LAN (VSCode)

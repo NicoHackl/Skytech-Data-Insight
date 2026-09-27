@@ -635,3 +635,31 @@ table.data tbody tr:hover { background: var(--surface-2); cursor: pointer; }
   .formula-var-row { grid-template-columns: 1fr; gap: 10px; padding: 14px 0; }
   .formula-var-row .icon-btn { justify-self: end; }
 }
+
+/* ==========================================================================
+   Data Insight (D-010): Filterleiste und Entitätsauswahl
+   ========================================================================== */
+
+.filter-bar { flex-wrap: wrap; }
+.filter-bar input[type="search"], .filter-bar input:not([type]) { flex: 1 1 220px; width: auto; }
+.filter-bar select { flex: 0 1 200px; width: auto; }
+.filter-bar .switch { margin-bottom: 0; }
+
+.pick-list { max-height: 60vh; overflow-y: auto; }
+.pick-entity { border-bottom: 1px solid var(--border); }
+.pick-entity:last-child { border-bottom: none; }
+.pick-row { display: flex; align-items: center; gap: 12px; padding: 10px 20px; }
+.pick-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--primary); }
+.pick-main { flex: 1; min-width: 0; }
+.pick-main .cell-sub { max-width: none; }
+.pick-state { color: var(--text-2); font-size: 13px; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.pick-attributes { padding: 4px 20px 12px 50px; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.pick-attribute { padding: 6px 0; width: 100%; cursor: pointer; }
+.pick-more { margin: 12px 20px; }
+
+.table-switch { margin-bottom: 0; }
+
+@media (max-width: 620px) {
+  .pick-row { padding: 10px 14px; flex-wrap: wrap; }
+  .pick-attributes { padding-left: 20px; }
+}

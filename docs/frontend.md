@@ -41,7 +41,8 @@ web/
     ├── styles.css          # das gesamte Design-System
     ├── api.ts              # typisierter API-Client (einziger fetch-Ort)
     ├── types.ts            # Datenverträge zum Backend
-    ├── components/         # wiederverwendbar: Layout, Theme, Icon
+    ├── format.ts           # Anzeigeformate (Messwert, Bytes, Anzahl)
+    ├── components/         # wiederverwendbar: Layout, Theme, Toast, Icon, SensorFields, EntityPicker
     └── pages/              # eine Datei je Route
 ```
 
@@ -58,15 +59,16 @@ in einem gemeinsamen Ordner (`shared/`) und wird per Pfad-Alias eingebunden — 
 ## Einstieg und Provider
 
 `main.tsx` verdrahtet nur; es enthält keine Logik. Reihenfolge der Provider ist verbindlich:
-Router außen, dann Theme. Ein Toast-Provider kommt dazu, sobald die erste Seite Aktionen hat
-(M3); er liegt dann unter dem Theme.
+Router außen, dann Theme, dann Toast — Theme hängt an nichts, Toast darf das Theme lesen.
 
 ```tsx
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>             {/* HashRouter statt BrowserRouter — siehe „Ingress" */}
       <ThemeProvider>        {/* Pflicht — siehe „Hell und Dunkel" */}
-        <App />              {/* kein AuthProvider: die Anmeldung macht der Ingress */}
+        <ToastProvider>
+          <App />            {/* kein AuthProvider: die Anmeldung macht der Ingress */}
+        </ToastProvider>
       </ThemeProvider>
     </HashRouter>
   </StrictMode>,
@@ -107,6 +109,9 @@ Seitenwechsel nicht neu montiert werden.
 <Routes>
   <Route element={<Layout />}>
     <Route path="/" element={<Uebersicht />} />
+    <Route path="/sensoren" element={<Sensoren />} />
+    <Route path="/sensoren/neu" element={<SensorenNeu />} />
+    <Route path="/sensoren/:id" element={<SensorBearbeiten />} />
     <Route path="*" element={<div className="content"><div className="empty">Seite nicht gefunden.</div></div>} />
   </Route>
 </Routes>
@@ -116,9 +121,11 @@ Grafana ist **keine** Route der SPA: der Menüpunkt ist ein normaler Link auf de
 `grafana/` (`GRAFANA_PATH` in `api.ts`), den nginx an Grafana weiterreicht (D-006). Weitere Seiten
 kommen mit den Meilensteinen, siehe [roadmap.md](roadmap.md).
 
-Datensätze mit Liste, Anlegen und Bearbeiten (z. B. Sensoren ab M3) folgen dem Muster
-**Liste** (`/sensoren`), **Anlegen** (`/sensoren/neu`), **Bearbeiten** (`/sensoren/:id`); Anlegen
-und Bearbeiten teilen sich eine Komponente mit `mode: 'create' | 'edit'`.
+Sensoren folgen dem Muster **Liste** (`/sensoren`), **Anlegen** (`/sensoren/neu`),
+**Bearbeiten** (`/sensoren/:id`). Anlegen ist eine Mehrfachauswahl (`components/EntityPicker.tsx`)
+mit einer Karte je Auswahl; Anlegen und Bearbeiten teilen sich die Felder in
+`components/SensorFields.tsx` – eine Quelle für „welche Felder hat ein Sensor". Feldfehler beim
+Anlegen kommen als `<index>.<feld>` und werden auf die Karte der Auswahl zurückgeführt.
 
 ## API-Client
 

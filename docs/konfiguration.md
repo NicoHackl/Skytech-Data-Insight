@@ -3,12 +3,15 @@
 ## Add-on-Optionen
 
 Gepflegt auf der Add-on-Seite in Home Assistant (Reiter „Konfiguration"). Fachliche Einstellungen
-(Sensorauswahl, Aufbewahrung) kommen mit M1 in die Datenbank, nicht hierher (Plan).
+stehen nicht hier, sondern in der Datenbank: Sensorauswahl in `skytech.sensor` (Seite „Sensoren"),
+Aufbewahrung in `skytech_config.einstellung` (siehe [datenmodell.md](datenmodell.md)).
 
 | Option | Typ | Voreinstellung | Wirkung |
 |---|---|---|---|
 | `log_level` | `debug` \| `info` \| `warning` \| `error` | `info` | Protokollstufe von Init-Skripten und Verwaltungsdienst. Grafana protokolliert erst ab `debug` ausführlich, sonst nur Warnungen |
 | `grafana_admin_password` | Passwort, optional | leer | Passwort des Grafana-Benutzers `admin` für die Anmeldung im LAN. Leer = bei jedem Start ein Zufallspasswort, LAN-Anmeldung damit gesperrt (D-011). Wird bei jedem Start gesetzt – eine Änderung wirkt nach dem Neustart des Add-ons |
+| `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart |
+| `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart |
 
 ## Ports
 
@@ -18,7 +21,7 @@ Freigabe, Umlegen oder Abschalten im Abschnitt „Netzwerk" der Add-on-Seite (D-
 |---|---|---|---|
 | `8099/tcp` | nur Ingress | Verwaltungsoberfläche und Grafana im HA-Seitenmenü | M0 |
 | `3000/tcp` | `3000` | Grafana im LAN: `http://<ha-adresse>:3000/` | M0 |
-| `5432/tcp` | – | PostgreSQL für VSCode | M1 (geplant) |
+| `5432/tcp` | `5432` | PostgreSQL im LAN, [datenbankzugang.md](datenbankzugang.md) | M1 |
 | `8765/tcp` | – | MCP-Server | M5 (geplant) |
 
 ## Umgebungsvariablen
@@ -31,9 +34,13 @@ Werden von `init-env` gesetzt bzw. im Image festgelegt – nicht von Hand.
 | `SKYTECH_LOG_LEVEL` | Option `log_level` | Protokollstufe |
 | `SKYTECH_VERSION` | Build-Argument `BUILD_VERSION` | Anzeige in der Oberfläche |
 | `PG_MAJOR` | `Dockerfile` | PostgreSQL-Hauptversion |
-| `SUPERVISOR_TOKEN` | Supervisor | fehlt er, läuft der lokale Testmodus (D-013) |
+| `SUPERVISOR_TOKEN` | Supervisor | fehlt er, läuft der lokale Testmodus (D-013); zugleich Token für die HA-WebSocket-API |
+| `SKYTECH_HA_URL`, `SKYTECH_HA_TOKEN` | nur lokaler Test | WebSocket-URL und Token eines HA; haben Vorrang vor dem Supervisor |
+| `SKYTECH_DB_HOST`, `SKYTECH_DB_PORT`, `SKYTECH_DB_NAME`, `SKYTECH_DB_TEST_PASSWORD` | nur Tests | Datenbankverbindung abweichend vom lokalen Socket |
 
 ## Secrets
 
-Das Grafana-Passwort wird nur per Standardeingabe an `grafana cli` übergeben, nie in eine Datei
-unter `/run` geschrieben und nie protokolliert. Vorlagen enthalten grundsätzlich keine Secrets.
+Das Grafana-Passwort wird nur per Standardeingabe an `grafana cli` übergeben, die
+Datenbank-Passwörter nur über die Umgebung genau eines `psql`-Aufrufs (`\getenv` in
+`bootstrap.sql`). Keines wird in eine Datei unter `/run` geschrieben oder protokolliert. Vorlagen
+enthalten grundsätzlich keine Secrets.

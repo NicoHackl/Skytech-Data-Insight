@@ -9,6 +9,22 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    # Echte TimescaleDB für die Integrationstests (tests/test_db_integration.py);
+    # Version wie im Dockerfile.
+    services:
+      timescaledb:
+        image: timescale/timescaledb:2.30.1-pg17
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      SKYTECH_TEST_DSN: postgresql://postgres:test@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v7
 
@@ -73,8 +89,9 @@ jobs:
       - name: Add-on-Image bauen (amd64)
         run: docker build --platform linux/amd64 --build-arg BUILD_VERSION=ci -t skytech-data-insight:ci .
 
-      # Rauchtest ohne Supervisor: alle Dienste müssen hochkommen und sich
-      # über die Status-API gesund melden (docs/test-strategie.md).
+      # Rauchtest ohne Supervisor: Datenbank und Grafana müssen sich über die
+      # Status-API gesund melden. Die Aufzeichnung hat ohne Home Assistant
+      # nichts zu tun und meldet genau das (docs/test-strategie.md).
       - name: Rauchtest
         run: |
           docker volume create sdi-ci
@@ -82,15 +99,19 @@ jobs:
             -c 'echo "{\"log_level\":\"info\",\"grafana_admin_password\":\"ci-test\"}" > /data/options.json'
           docker run -d --name sdi-ci -v sdi-ci:/data -p 18099:8099 -p 13000:3000 skytech-data-insight:ci
           for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[]; .is_ok)' > /dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[] | select(.key != "collector"); .is_ok) and any(.services[]; .key == "collector" and (.detail | test("Home Assistant")))' > /dev/null 2>&1; then
               echo "Alle Dienste gesund."; break
             fi
             sleep 3
           done
-          curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[]; .is_ok)'
+          curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[] | select(.key != "collector"); .is_ok)'
           curl -fsS -o /dev/null http://127.0.0.1:18099/grafana/
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-WEBAUTH-USER: admin' http://127.0.0.1:13000/api/hassio_ingress/lokaltest/grafana/api/user)" = "401"
           test "$(curl -s -o /dev/null -w '%{http_code}' -u admin:ci-test http://127.0.0.1:13000/api/hassio_ingress/lokaltest/grafana/api/user)" = "200"
+          curl -fsS http://127.0.0.1:18099/api/status | jq -e '.services[] | select(.key == "collector") | .detail | test("Home Assistant")'
+          # Migrationen gelaufen, Kataloge befüllt, Sensor-API antwortet.
+          curl -fsS http://127.0.0.1:18099/api/catalog | jq -e '.kategorien | length > 0'
+          curl -fsS http://127.0.0.1:18099/api/sensors | jq -e '.sensors == []'
 
       - name: Protokoll bei Fehler
         if: failure()

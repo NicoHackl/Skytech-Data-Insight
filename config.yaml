@@ -1,5 +1,5 @@
 name: "Skytech Data Insight"
-version: "0.1.0"
+version: "0.2.0"
 slug: "skytech_data_insight"
 description: >-
   Langzeitablage und Auswertung von Energiedaten für Home Assistant:
@@ -23,15 +23,20 @@ homeassistant_api: true
 hassio_api: true
 watchdog: "tcp://[HOST]:[PORT:8099]"
 # LAN-Zugänge. Freigeben, umlegen oder abschalten über den Abschnitt
-# „Netzwerk" der Add-on-Seite (D-009). Postgres (5432) und MCP (8765)
-# kommen mit M1 bzw. M5 dazu.
+# „Netzwerk" der Add-on-Seite (D-009). MCP (8765) kommt mit M5 dazu.
 ports:
   3000/tcp: 3000
+  5432/tcp: 5432
 ports_description:
   3000/tcp: "Grafana im LAN (Anmeldung mit Grafana-Benutzer)"
+  5432/tcp: "PostgreSQL im LAN, z. B. für VSCode (Anmeldung mit skytech_admin oder skytech_reader)"
 options:
   log_level: info
   grafana_admin_password: ""
+  db_password: ""
+  db_readonly_password: ""
 schema:
   log_level: list(debug|info|warning|error)
   grafana_admin_password: password?
+  db_password: password?
+  db_readonly_password: password?

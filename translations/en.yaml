@@ -8,5 +8,16 @@ configuration:
       Password of the Grafana user "admin" for LAN login (port 3000). Leave empty
       if Grafana is only used through the Home Assistant sidebar – LAN login is
       then locked.
+  db_password:
+    name: Database password (full access)
+    description: >-
+      Password of the database user "skytech_admin" for LAN access (port 5432,
+      e.g. VSCode). May read, write and change the schema. Empty = login locked.
+  db_readonly_password:
+    name: Database password (read only)
+    description: >-
+      Password of the database user "skytech_reader" for read-only LAN access.
+      Empty = login locked.
 network:
   3000/tcp: Grafana in the LAN
+  5432/tcp: PostgreSQL in the LAN (VSCode)

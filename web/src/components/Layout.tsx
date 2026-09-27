@@ -26,6 +26,9 @@ export function Layout() {
         <nav className="nav" onClick={closeMobile}>
           <NavLink to="/" end className={navClass}><Icon name="dashboard" /><span>Übersicht</span></NavLink>
 
+          <div className="nav-label">Aufzeichnung</div>
+          <NavLink to="/sensoren" className={navClass}><Icon name="pulse" /><span>Sensoren</span></NavLink>
+
           <div className="nav-label">Auswertung</div>
           {/* Grafana ist keine Route der SPA, sondern ein eigener Dienst im selben Ingress. */}
           <a href={GRAFANA_PATH} className="nav-item"><Icon name="chart" /><span>Grafana</span></a>

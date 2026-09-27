@@ -1,24 +1,28 @@
 # Sicherheit und Datenschutz
 
-## Zugänge (Stand M0)
+## Zugänge (Stand M1)
 
 | Zugang | Schutz |
 |---|---|
 | Verwaltungsoberfläche | nur über HA-Ingress (HA-Login); nginx nimmt auf 8099 nur Verbindungen vom Supervisor `172.30.32.2` an |
 | Grafana über Ingress | Anmeldung per `auth.proxy` mit dem HA-Benutzernamen; Grafana akzeptiert den Header nur von `127.0.0.1` (D-006) |
 | Grafana im LAN (3000) | Grafana-Login `admin`; der Anmeldeheader wird von nginx entfernt, ein gefälschter Header führt zu `401` (in der CI geprüft). Ohne gesetztes Passwort ist die Anmeldung gesperrt (D-011) |
-| PostgreSQL | nur lokaler Socket mit `peer` (D-012); kein TCP-Zugang aus dem LAN |
+| PostgreSQL im Container | Verwaltungsdienst und Collector über den lokalen Socket mit `peer` (D-012), je Aufgabe eigene Rolle |
+| PostgreSQL im LAN (5432) | nur `skytech_admin`/`skytech_reader`, nur Datenbank `skytech`, nur mit Passwort (SCRAM); ohne Passwort gesperrt. Unverschlüsselt – nur im LAN nutzen |
+| Home Assistant | WebSocket-API über den Supervisor mit dessen Token; das Add-on liest nur (Zustände, Verlauf) und schreibt nichts nach HA |
 
 Proxy-Benutzer bekommen in Grafana die Rolle `Admin`, weil nur HA-Administratoren das
 Ingress-Panel sehen.
 
-> **Wichtig:** Port 3000 (und später 5432 und 8765) nie per Portfreigabe ins Internet öffnen.
+> **Wichtig:** Port 3000 und 5432 (und später 8765) nie per Portfreigabe ins Internet öffnen.
 > Fernzugriff nur über VPN.
 
 ## Secrets
 
 - Keine Secrets in Vorlagen, erzeugten Konfigurationsdateien, Logs oder im Repo.
-- Das Grafana-Passwort gelangt nur per Standardeingabe an `grafana cli`.
+- Das Grafana-Passwort gelangt nur per Standardeingabe an `grafana cli`, die Datenbank-Passwörter
+  nur über die Umgebung eines einzelnen `psql`-Aufrufs.
+- Das Änderungsprotokoll speichert den HA-Benutzernamen zu jeder Änderung an der Sensorliste.
 
 ## Externe Dienste
 

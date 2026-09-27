@@ -4,11 +4,19 @@
 
 | Art | Werkzeug | Umfang |
 |---|---|---|
-| Unit-Tests Python | `pytest -q` | Anzeigezeit, Dienstprüfungen (auch gegen echten HTTP-Server), Status-API |
+| Unit-Tests Python | `pytest -q` | Wertumsetzung, Vorschläge, Eingabeprüfung, Collector (Änderungserkennung, Attribute, Puffer, verspätete Werte), HA-Client gegen nachgebauten HA (`tests/fake_ha.py`: Anmeldung, Abo, Verlauf, Neuverbindung), Dienstprüfungen, Status-API |
+| Integration Datenbank | `SKYTECH_TEST_DSN=… pytest -q` | gegen echte TimescaleDB: Migrationen (idempotent, Prüfsumme, Anlagen-Migration), Minutenwerte (zeitgewichtet, Lücken, Zähler-Neustart, wiederholbar), Verdichtungen (Gewichtung, Berliner Tag), Aufbewahrung, Rollenrechte, Sensorverwaltung samt Protokoll, Collector Ende-zu-Ende mit Nachladen und NOTIFY. Ohne `SKYTECH_TEST_DSN` übersprungen; die CI stellt die Datenbank bereit |
 | Paketierung | `pytest` (`tests/test_packaging.py`) | Manifest, Übersetzungen, s6-Dienste und Abhängigkeiten, jeder Vorlagen-Platzhalter wird gesetzt, Ingress-Sperre und LAN-Header-Entfernung |
 | Lint | `ruff check app tests`, ShellCheck (CI) | Python und Init-/Dienstskripte |
 | Frontend | `cd web && npm run build` | Typprüfung und Bundle; CI prüft Drift des eingecheckten Bundles |
-| Container-Rauchtest | CI-Job `image` | Image bauen, starten, alle Dienste gesund, Grafana über Ingress-Port, LAN-Login und Abwehr gefälschter Header |
+| Container-Rauchtest | CI-Job `image` | Image bauen, starten, Datenbank und Grafana gesund, Migrationen gelaufen, Sensor-API antwortet, Grafana über Ingress-Port, LAN-Login und Abwehr gefälschter Header |
+
+## Integrationstests lokal
+
+```bash
+docker run -d --name tsdb-test -e POSTGRES_PASSWORD=test -p 15432:5432 timescale/timescaledb:2.30.1-pg17
+SKYTECH_TEST_DSN=postgresql://postgres:test@127.0.0.1:15432/postgres pytest -q
+```
 
 ## Lokaler Containertest (amd64)
 
@@ -28,6 +36,11 @@ docker run -d --name sdi --platform linux/amd64 -v sdi-data:/data -p 18099:8099 
 | Status | `curl http://127.0.0.1:18099/api/status` | beide Dienste `is_ok: true` |
 | Grafana wie über Ingress | `curl -H "X-Remote-User-Name: test" http://127.0.0.1:18099/grafana/api/user` | Benutzer `test` |
 | Grafana im LAN | Browser `http://127.0.0.1:13000/` | Weiterleitung, Grafana-Login |
+
+Mit Aufzeichnung: einen nachgebauten HA starten (z. B. `tests/fake_ha.py` in einem kleinen Skript,
+das Werte laufend ändert) und den Container zusätzlich mit
+`-p 15433:5432 -e SKYTECH_HA_URL=ws://host.lima.internal:<port>/api/websocket -e SKYTECH_HA_TOKEN=<token>`
+starten; in `options.json` `db_password`/`db_readonly_password` setzen.
 
 Für einen Browsertest der Oberfläche unter dem vollen Ingress-Pfad genügt ein kleiner Proxy, der
 `/api/hassio_ingress/lokaltest` entfernt und auf Port 18099 weiterreicht – so arbeitet der

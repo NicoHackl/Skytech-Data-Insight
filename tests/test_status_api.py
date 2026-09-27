@@ -14,14 +14,16 @@ async def test_status_reports_services_in_order(monkeypatch):
     monkeypatch.setattr(health, "probe_database", database)
     monkeypatch.setattr(health, "probe_grafana", grafana)
 
-    service = main.AdminService(ingress_entry="/api/hassio_ingress/abc", version="0.1.0")
+    service = main.AdminService(ingress_entry="/api/hassio_ingress/abc", version="0.1.0", start_backend=False)
     async with TestClient(TestServer(service.build_app())) as client:
         response = await client.get("/api/status")
         assert response.status == 200
         body = await response.json()
 
     assert body["version"] == "0.1.0"
-    assert [s["key"] for s in body["services"]] == ["database", "grafana"]
+    assert [s["key"] for s in body["services"]] == ["database", "grafana", "collector"]
+    assert body["services"][2]["detail"] == "Startet …"
+    assert body["aufzeichnung"] is None
     assert body["services"][1]["detail"] == "Pfad /api/hassio_ingress/abc"
     # Menschenlesbar ohne Offset (Regel 9), Maschinenformat zusätzlich.
     assert "+" not in body["checked_at"] and len(body["checked_at"]) == 19

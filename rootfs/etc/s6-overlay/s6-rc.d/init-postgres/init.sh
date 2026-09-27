@@ -50,10 +50,16 @@ fi
 bootstrap_ok=true
 psql_run() {
     # NOTICE-Meldungen wie „extension already exists" sind im Normalfall erwartet.
-    PGOPTIONS="-c client_min_messages=warning" s6-setuidgid postgres "${PGBIN}/psql" --no-psqlrc --quiet --set=ON_ERROR_STOP=1 \
+    PGOPTIONS="-c client_min_messages=warning" \
+        SKYTECH_DB_ADMIN_PASSWORD="${SKYTECH_DB_ADMIN_PASSWORD:-}" \
+        SKYTECH_DB_READER_PASSWORD="${SKYTECH_DB_READER_PASSWORD:-}" \
+        s6-setuidgid postgres "${PGBIN}/psql" --no-psqlrc --quiet --set=ON_ERROR_STOP=1 \
         --host=/run/postgresql --username=postgres "$@"
 }
-psql_run --dbname=postgres --file=/usr/share/skytech/bootstrap.sql || bootstrap_ok=false
+# Passwörter nur über die Umgebung dieses einen Aufrufs (\getenv in bootstrap.sql).
+SKYTECH_DB_ADMIN_PASSWORD=$(skytech::option db_password) \
+SKYTECH_DB_READER_PASSWORD=$(skytech::option db_readonly_password) \
+    psql_run --dbname=postgres --file=/usr/share/skytech/bootstrap.sql || bootstrap_ok=false
 # Eigene Sitzung für das Update: TimescaleDB verlangt, dass ALTER EXTENSION
 # der erste Befehl nach dem Verbinden ist.
 if [[ "${bootstrap_ok}" == true ]]; then
@@ -62,10 +68,16 @@ fi
 if [[ "${bootstrap_ok}" == true ]]; then
     psql_run --dbname=skytech --command="ALTER EXTENSION timescaledb UPDATE" || bootstrap_ok=false
 fi
+if [[ "${bootstrap_ok}" == true ]]; then
+    psql_run --dbname=skytech --file=/usr/share/skytech/bootstrap_skytech.sql || bootstrap_ok=false
+fi
 
 s6-setuidgid postgres "${PGBIN}/pg_ctl" --pgdata="${PGDATA}" --mode=fast --wait stop > /dev/null
 
 if [[ "${bootstrap_ok}" != true ]]; then
     bashio::exit.nok "Grundeinrichtung der Datenbank fehlgeschlagen (Details im Protokoll oberhalb)."
+fi
+if [[ -z "$(skytech::option db_password)" ]] && [[ -z "$(skytech::option db_readonly_password)" ]]; then
+    bashio::log.info "Kein Datenbank-Passwort gesetzt – Zugang aus dem LAN (Port 5432) ist gesperrt."
 fi
 bashio::log.info "Datenbank bereit."

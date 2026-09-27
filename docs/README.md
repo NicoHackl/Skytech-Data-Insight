@@ -28,7 +28,8 @@ Abweichungen in [bekannte-luecken.md](bekannte-luecken.md).
 | [design-entscheidungen.md](design-entscheidungen.md) | Entscheidungs-Log — Quelle der Wahrheit fürs „warum" |
 | [adr/](adr/) | Ausführliche Entscheidungsdokumente |
 | [konfiguration.md](konfiguration.md) | Add-on-Optionen, Ports, Umgebungsvariablen, Secrets |
-| [datenmodell.md](datenmodell.md) | Datenbank, Rollen, Speicherorte |
+| [datenmodell.md](datenmodell.md) | Tabellen, Sichten, Minutenwerte, Verdichtungen, Aufbewahrung, Migrationen, Rollen |
+| [datenbankzugang.md](datenbankzugang.md) | Zugang aus VSCode und anderen SQL-Werkzeugen |
 | [api-referenz.md](api-referenz.md) | HTTP-Endpunkte des Verwaltungsdienstes |
 | [sicherheit-datenschutz.md](sicherheit-datenschutz.md) | Zugänge, Anmeldung, externe Dienste |
 | [bekannte-luecken.md](bekannte-luecken.md) | Offene Punkte, Stolpersteine |
