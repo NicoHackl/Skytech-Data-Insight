@@ -1,0 +1,2 @@
+aiohttp==3.11.11
+asyncpg==0.30.0

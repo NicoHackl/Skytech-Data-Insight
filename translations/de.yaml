@@ -1,0 +1,12 @@
+configuration:
+  log_level:
+    name: Protokollstufe
+    description: Wie ausführlich das Add-on ins Protokoll schreibt.
+  grafana_admin_password:
+    name: Grafana-Admin-Passwort
+    description: >-
+      Passwort des Grafana-Benutzers „admin" für die Anmeldung im LAN (Port 3000).
+      Leer lassen, wenn Grafana nur über das HA-Seitenmenü genutzt wird – dann ist
+      die LAN-Anmeldung gesperrt.
+network:
+  3000/tcp: Grafana im LAN

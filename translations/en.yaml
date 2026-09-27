@@ -1,0 +1,12 @@
+configuration:
+  log_level:
+    name: Log level
+    description: How verbose the add-on logs are.
+  grafana_admin_password:
+    name: Grafana admin password
+    description: >-
+      Password of the Grafana user "admin" for LAN login (port 3000). Leave empty
+      if Grafana is only used through the Home Assistant sidebar – LAN login is
+      then locked.
+network:
+  3000/tcp: Grafana in the LAN

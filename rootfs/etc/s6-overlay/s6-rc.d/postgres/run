@@ -1,0 +1,4 @@
+#!/command/with-contenv bashio
+# PostgreSQL im Vordergrund. Konfiguration: /run/skytech/postgres/skytech.conf.
+bashio::log.info "Starte Datenbank …"
+exec s6-setuidgid postgres "/usr/lib/postgresql/${PG_MAJOR}/bin/postgres" -D /data/pgdata

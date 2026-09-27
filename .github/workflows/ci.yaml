@@ -1,0 +1,97 @@
+name: CI (Lint, Tests, Frontend, Image)
+
+on:
+  push:
+    branches: [agent/main, main]
+  pull_request:
+    branches: [agent/main, main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install -r app/requirements.txt
+
+      - name: Ruff (Lint)
+        run: ruff check app tests
+
+      - name: Pytest
+        run: pytest -q
+
+      - name: ShellCheck (Init- und Dienstskripte)
+        run: |
+          shellcheck --shell=bash --exclude=SC1008,SC1091,SC2154 \
+            rootfs/usr/lib/skytech/*.sh \
+            rootfs/etc/s6-overlay/s6-rc.d/*/init.sh \
+            rootfs/etc/s6-overlay/s6-rc.d/*/run
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web
+
+      # `npm run build` fuehrt zuerst `tsc --noEmit` aus – Typfehler brechen hier ab.
+      - name: Build (Typprüfung + Bündel)
+        run: npm run build
+        working-directory: web
+
+      # Das Bundle ist eingecheckt (D-007). Weicht der frische Build vom
+      # eingecheckten Stand ab, wurde vergessen zu bauen.
+      - name: Eingechecktes Bündel auf Drift prüfen
+        run: |
+          git add --intent-to-add -A app/static
+          if ! git diff --exit-code --stat app/static; then
+            echo "::error::app/static weicht vom frischen Build ab. 'cd web && npm run build' ausfuehren und das Ergebnis mitcommitten."
+            exit 1
+          fi
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add-on-Image bauen (amd64)
+        run: docker build --platform linux/amd64 --build-arg BUILD_VERSION=ci -t skytech-data-insight:ci .
+
+      # Rauchtest ohne Supervisor: alle Dienste müssen hochkommen und sich
+      # über die Status-API gesund melden (docs/test-strategie.md).
+      - name: Rauchtest
+        run: |
+          docker volume create sdi-ci
+          docker run --rm -v sdi-ci:/data --entrypoint sh skytech-data-insight:ci \
+            -c 'echo "{\"log_level\":\"info\",\"grafana_admin_password\":\"ci-test\"}" > /data/options.json'
+          docker run -d --name sdi-ci -v sdi-ci:/data -p 18099:8099 -p 13000:3000 skytech-data-insight:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[]; .is_ok)' > /dev/null 2>&1; then
+              echo "Alle Dienste gesund."; break
+            fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:18099/api/status | jq -e 'all(.services[]; .is_ok)'
+          curl -fsS -o /dev/null http://127.0.0.1:18099/grafana/
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'X-WEBAUTH-USER: admin' http://127.0.0.1:13000/api/hassio_ingress/lokaltest/grafana/api/user)" = "401"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -u admin:ci-test http://127.0.0.1:13000/api/hassio_ingress/lokaltest/grafana/api/user)" = "200"
+
+      - name: Protokoll bei Fehler
+        if: failure()
+        run: docker logs sdi-ci || true

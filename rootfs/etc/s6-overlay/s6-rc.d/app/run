@@ -1,0 +1,4 @@
+#!/command/with-contenv bashio
+bashio::log.info "Starte Verwaltungsdienst …"
+cd /opt/skytech/app || bashio::exit.nok "Verzeichnis /opt/skytech/app fehlt."
+exec /opt/venv/bin/python3 main.py
