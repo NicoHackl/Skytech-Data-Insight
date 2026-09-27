@@ -81,3 +81,46 @@ def test_buffer_overflow_drops_oldest(monkeypatch):
         collector.on_state_changed(state(str(second), T0 + timedelta(seconds=second)))
     assert [r.value.number for r in collector._buffer] == [2.0, 3.0]
     assert collector.dropped == 2
+
+
+def test_minutes_lagging():
+    collector = make_collector()
+    assert not collector.minutes_lagging(T0)
+    collector._watermark = T0
+    assert not collector.minutes_lagging(T0 + timedelta(minutes=2))
+    assert collector.minutes_lagging(T0 + timedelta(minutes=4))
+
+
+async def test_minute_loop_survives_unexpected_exception(monkeypatch):
+    import asyncio
+    import collector as collector_module
+
+    collector = make_collector()
+    calls = []
+
+    async def failing_compute(now):
+        calls.append(now)
+        raise TypeError("unerwartet")
+
+    async def no_flush():
+        return None
+
+    monkeypatch.setattr(collector_module, "MINUTE_DELAY_S", 0)
+    monkeypatch.setattr(collector, "compute_minutes", failing_compute)
+    monkeypatch.setattr(collector, "flush", no_flush)
+
+    real_sleep = asyncio.sleep
+
+    async def fast_sleep(_seconds):
+        await real_sleep(0)
+
+    monkeypatch.setattr(collector_module.asyncio, "sleep", fast_sleep)
+    task = asyncio.create_task(collector._minute_loop())
+    for _ in range(50):
+        if len(calls) >= 3:
+            break
+        await real_sleep(0.01)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    assert len(calls) >= 3
+    assert "unerwartet" in collector.minute_error

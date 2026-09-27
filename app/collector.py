@@ -91,6 +91,9 @@ class Collector:
         self._tasks: list[asyncio.Task] = []
         self.last_write: datetime | None = None
         self.last_error: str | None = None
+        # Getrennt von last_error: ein erfolgreiches Schreiben der Rohwerte darf
+        # einen Fehler der Minutenberechnung nicht überdecken.
+        self.minute_error: str | None = None
         self.dropped = 0
 
     # ------------------------------------------------------------------
@@ -107,6 +110,20 @@ class Collector:
             asyncio.create_task(self._flush_loop(), name="collector-flush"),
             asyncio.create_task(self._minute_loop(), name="collector-minute"),
         ]
+        for task in self._tasks:
+            task.add_done_callback(self._task_ended)
+
+    def _task_ended(self, task: asyncio.Task) -> None:
+        """Endet eine Schleife unerwartet, muss das sichtbar werden – nicht erst beim Beenden."""
+        if task.cancelled():
+            return
+        exc = task.exception()
+        self.last_error = f"Aufzeichnung gestoppt ({task.get_name()}): {exc or 'unerwartet beendet'}"
+        log.error("Aufgabe %s beendet: %r", task.get_name(), exc)
+
+    def minutes_lagging(self, now: datetime) -> bool:
+        """Stehen die Minutenwerte? Normal ist höchstens eine Minute plus Verzögerung Rückstand."""
+        return self._watermark is not None and now - self._watermark > timedelta(minutes=3)
 
     async def stop(self) -> None:
         for task in self._tasks:
@@ -233,7 +250,11 @@ class Collector:
     async def _flush_loop(self) -> None:
         while True:
             await asyncio.sleep(FLUSH_INTERVAL_S)
-            await self.flush()
+            try:
+                await self.flush()
+            except Exception:  # noqa: BLE001 – die Schleife darf nie still enden
+                self.last_error = "Schreiben fehlgeschlagen (Details im Protokoll)."
+                log.exception("Schreiben der Rohwerte fehlgeschlagen.")
 
     def values_last_minute(self) -> int:
         now = asyncio.get_running_loop().time()
@@ -261,9 +282,10 @@ class Collector:
             try:
                 await self.flush()
                 await self.compute_minutes(datetime.now(timezone.utc))
-            except (asyncpg.PostgresError, OSError) as exc:
-                self.last_error = f"Minutenwerte fehlgeschlagen: {exc}"
-                log.warning(self.last_error)
+                self.minute_error = None
+            except Exception as exc:  # noqa: BLE001 – eine Ausnahme beendete sonst die Schleife still (0.4.1)
+                self.minute_error = f"Minutenwerte fehlgeschlagen: {exc or type(exc).__name__}"
+                log.exception("Berechnung der Minutenwerte fehlgeschlagen.")
 
     async def compute_minutes(self, now: datetime) -> None:
         """Berechnet alle abgeschlossenen Minuten seit dem letzten Lauf."""

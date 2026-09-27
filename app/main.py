@@ -173,8 +173,13 @@ class AdminService:
         if not self.ha.connected:
             return health.ServiceHealth("collector", "Aufzeichnung", False,
                                         f"Home Assistant nicht verbunden{': ' + self.ha.last_error if self.ha.last_error else ''}")
-        if self.collector.last_error:
-            return health.ServiceHealth("collector", "Aufzeichnung", False, self.collector.last_error)
+        if self.collector.last_error or self.collector.minute_error:
+            return health.ServiceHealth("collector", "Aufzeichnung", False,
+                                        self.collector.last_error or self.collector.minute_error)
+        minutes_until = self.collector.minutes_until
+        if minutes_until is not None and self.collector.minutes_lagging(datetime.now(timezone.utc)):
+            return health.ServiceHealth("collector", "Aufzeichnung", False,
+                                        f"Minutenwerte stehen seit {format_berlin(minutes_until)}")
         return health.ServiceHealth(
             "collector", "Aufzeichnung", True,
             f"{len(self.collector.active_sensor_ids)} Sensoren · {self.collector.values_last_minute()} Werte/min",

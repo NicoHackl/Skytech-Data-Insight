@@ -23,6 +23,12 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ### Behoben
 
+- **Minutenwerte blieben stehen (0.4.1).** Auf einer Anlage hörte die Berechnung der Minutenwerte
+  nach einem Neustart still auf, während die Rohwerte weiter aufgezeichnet wurden – Grafana zeigte
+  ab da keine Werte mehr. Die Schleifen der Aufzeichnung fangen jetzt jede Ausnahme ab, protokollieren
+  sie mit Ursache und laufen weiter; die Übersicht meldet „Minutenwerte stehen seit …", sobald die
+  Berechnung mehr als drei Minuten zurückliegt. Fehlende Minuten werden beim nächsten Start aus den
+  Rohwerten nachgerechnet.
 - MCP-Werkzeuge für Grafana melden einen nicht erreichbaren Grafana (z. B. während eines
   Neustarts) jetzt als verständlichen Fehler statt als interne Ausnahme.
 
