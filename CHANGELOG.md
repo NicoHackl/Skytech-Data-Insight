@@ -23,6 +23,11 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ### Behoben
 
+- **Ursache der stehenden Minutenwerte behoben (0.4.2).** Schreib- und Minutenschleife schrieben
+  den Puffer gleichzeitig; danach wurde abgezählt entfernt. Das führte zu „pop from an empty
+  deque" und konnte Rohwerte, die während des Schreibens eingingen, ungeschrieben verwerfen. Der
+  Puffer wird jetzt gesperrt und beim Schreiben ausgetauscht – kein Wert geht mehr verloren, auch
+  nicht, wenn das Schreiben scheitert.
 - **Minutenwerte blieben stehen (0.4.1).** Auf einer Anlage hörte die Berechnung der Minutenwerte
   nach einem Neustart still auf, während die Rohwerte weiter aufgezeichnet wurden – Grafana zeigte
   ab da keine Werte mehr. Die Schleifen der Aufzeichnung fangen jetzt jede Ausnahme ab, protokollieren

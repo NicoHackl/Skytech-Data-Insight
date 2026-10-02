@@ -1,5 +1,5 @@
 name: "Skytech Data Insight"
-version: "0.4.1"
+version: "0.4.2"
 slug: "skytech_data_insight"
 description: >-
   Langzeitablage und Auswertung von Energiedaten für Home Assistant:

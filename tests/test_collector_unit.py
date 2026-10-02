@@ -124,3 +124,60 @@ async def test_minute_loop_survives_unexpected_exception(monkeypatch):
     await asyncio.gather(task, return_exceptions=True)
     assert len(calls) >= 3
     assert "unerwartet" in collector.minute_error
+
+
+class SlowPool:
+    """Pool-Attrappe: Schreiben dauert, damit sich Aufrufe überschneiden."""
+
+    def __init__(self, fail_first=False):
+        self.written = []
+        self.fail_first = fail_first
+
+    def acquire(self):
+        pool = self
+
+        class Connection:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_):
+                return False
+
+            async def execute(self, _sql, times, ids, numbers, texts):
+                import asyncio
+                await asyncio.sleep(0.01)
+                if pool.fail_first:
+                    pool.fail_first = False
+                    raise OSError("Datenbank weg")
+                pool.written.extend(numbers)
+
+        return Connection()
+
+
+async def test_concurrent_flush_loses_nothing():
+    import asyncio
+    collector = make_collector(SensorConfig(1, "sensor.pv", None, True))
+    collector._pool = SlowPool()
+    for second in range(5):
+        collector.on_state_changed(state(str(second), T0 + timedelta(seconds=second)))
+    first = asyncio.create_task(collector.flush())
+    await asyncio.sleep(0)
+    for second in range(5, 8):
+        collector.on_state_changed(state(str(second), T0 + timedelta(seconds=second)))
+    await asyncio.gather(first, collector.flush(), collector.flush())
+    assert sorted(collector._pool.written) == [float(n) for n in range(8)]
+    assert not collector._buffer
+
+
+async def test_failed_flush_keeps_order_with_new_values():
+    import asyncio
+    collector = make_collector(SensorConfig(1, "sensor.pv", None, True))
+    collector._pool = SlowPool(fail_first=True)
+    collector.on_state_changed(state("1", T0))
+    task = asyncio.create_task(collector.flush())
+    await asyncio.sleep(0)
+    collector.on_state_changed(state("2", T0 + timedelta(seconds=1)))
+    await task
+    assert [r.value.number for r in collector._buffer] == [1.0, 2.0]
+    await collector.flush()
+    assert collector._pool.written == [1.0, 2.0]

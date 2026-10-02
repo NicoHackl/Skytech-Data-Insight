@@ -84,6 +84,7 @@ class Collector:
         self._by_entity: dict[str, list[SensorConfig]] = {}
         self._last: dict[int, tuple[datetime, StoredValue]] = {}
         self._buffer: deque[Reading] = deque()
+        self._flush_lock = asyncio.Lock()
         self._watermark: datetime | None = None
         self._late: dict[int, datetime] = {}
         self._written: deque[tuple[float, int]] = deque()
@@ -226,26 +227,40 @@ class Collector:
     # ------------------------------------------------------------------
 
     async def flush(self) -> None:
-        if not self._buffer:
-            return
-        batch = list(self._buffer)
-        try:
-            async with self._pool.acquire() as connection:
-                await connection.execute(
-                    _INSERT_SQL,
-                    [r.time for r in batch], [r.sensor_id for r in batch],
-                    [r.value.number for r in batch], [r.value.text for r in batch],
-                )
-        except (asyncpg.PostgresError, OSError) as exc:
-            self.last_error = f"Schreiben fehlgeschlagen: {exc}"
-            log.warning("%s – %d Werte bleiben im Puffer.", self.last_error, len(self._buffer))
-            return
-        for _ in batch:
+        """Schreibt den Puffer. Schreib- und Minutenschleife rufen das beide auf –
+        deshalb gesperrt und mit Tausch des Puffers statt Abzählen: Werte, die
+        während des Schreibens eingehen, landen im neuen Puffer und gehen nie
+        verloren (Fehler bis 0.4.1: „pop from an empty deque")."""
+        async with self._flush_lock:
+            if not self._buffer:
+                return
+            batch, self._buffer = self._buffer, deque()
+            try:
+                async with self._pool.acquire() as connection:
+                    await connection.execute(
+                        _INSERT_SQL,
+                        [r.time for r in batch], [r.sensor_id for r in batch],
+                        [r.value.number for r in batch], [r.value.text for r in batch],
+                    )
+            except (asyncpg.PostgresError, OSError) as exc:
+                self._restore_batch(batch)
+                self.last_error = f"Schreiben fehlgeschlagen: {exc}"
+                log.warning("%s – %d Werte bleiben im Puffer.", self.last_error, len(self._buffer))
+                return
+            except BaseException:
+                self._restore_batch(batch)
+                raise
+            self._written.append((asyncio.get_running_loop().time(), len(batch)))
+            self.last_write = datetime.now(timezone.utc)
+            self.last_error = None
+
+    def _restore_batch(self, batch: deque) -> None:
+        """Nicht geschriebene Werte zurück an den Anfang; Obergrenze wie beim Anhängen."""
+        batch.extend(self._buffer)
+        self._buffer = batch
+        while len(self._buffer) > MAX_BUFFER:
             self._buffer.popleft()
-        now = asyncio.get_running_loop().time()
-        self._written.append((now, len(batch)))
-        self.last_write = datetime.now(timezone.utc)
-        self.last_error = None
+            self.dropped += 1
 
     async def _flush_loop(self) -> None:
         while True:

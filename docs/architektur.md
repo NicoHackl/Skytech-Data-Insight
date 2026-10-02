@@ -71,7 +71,7 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
    seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen (höchstens 10 Tage), dann den
    aktuellen Zustand übernehmen.
 3. Je Zustandswechsel: Wert je betroffenem Sensor umsetzen, nur bei Änderung puffern.
-4. Alle 2 s: Puffer gebündelt schreiben. Datenbank weg → Puffer bleibt (höchstens 100 000 Werte).
+4. Alle 2 s (und vor jeder Minutenberechnung): Puffer gebündelt schreiben – gesperrt, der Puffer wird dabei ausgetauscht. Datenbank weg → Werte kommen zurück in den Puffer (höchstens 100 000).
 5. Jede Minute (5 s nach Minutenwechsel): Minutenwerte der abgeschlossenen Minuten berechnen;
    verspätete oder nachgeladene Werte lösen eine Neuberechnung der betroffenen Sensoren aus.
 6. Änderungen an `skytech.sensor` (Oberfläche oder SQL) kommen per `NOTIFY`; neue Sensoren
