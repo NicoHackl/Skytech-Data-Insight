@@ -35,7 +35,7 @@ skytech.messwert  ──(minute_values.py)──►  skytech.messwert_1min
 | `attribut` | leer = Zustand der Entität, sonst Name des Attributs (z. B. `current_temperature`) |
 | `name` | Anzeigename |
 | `kategorie` | → `skytech.kategorie` (pv, speicher, netz, heizung, verbraucher, sonstiges) |
-| `groesse` | → `skytech.groesse` (leistung, energie, ladezustand, temperatur, spannung, strom, zustand, sonstiges) |
+| `groesse` | → `skytech.groesse` (leistung, energie, ladezustand, temperatur, spannung, strom, zustand, preis, sonstiges) |
 | `rolle` | `ist`, `soll` oder leer |
 | `soll_ist_paar` | Paarname; je Paar höchstens ein Soll und ein Ist (D-016) |
 | `einheit`, `anlage` | frei; `anlage` fasst Sensoren einer Anlage zusammen |

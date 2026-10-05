@@ -25,6 +25,7 @@ _UNIT_TO_QUANTITY = {
     "Wh": "energie", "kWh": "energie", "MWh": "energie",
     "°C": "temperatur", "K": "temperatur",
     "V": "spannung", "A": "strom",
+    "€/kWh": "preis", "ct/kWh": "preis", "EUR/kWh": "preis", "€/MWh": "preis", "EUR/MWh": "preis",
 }
 _STATE_DOMAINS = frozenset({"binary_sensor", "switch", "input_boolean", "light", "fan", "climate"})
 _COUNTER_STATE_CLASSES = frozenset({"total", "total_increasing"})

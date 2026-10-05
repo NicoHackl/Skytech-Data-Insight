@@ -8,6 +8,11 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt
+
+- **Größe „Preis"** (`preis`) für Tarif- und Börsenpreise wie €/kWh (System-Migration 0002).
+  Neue Sensoren mit der Einheit €/kWh, ct/kWh oder €/MWh bekommen sie als Vorschlag.
+
 ### Hinzugefügt (Meilenstein M2, Version 0.4.0)
 
 - **Daten im Home-Assistant-Backup, richtig gesichert.** Vor jedem HA-Backup legt das Add-on einen

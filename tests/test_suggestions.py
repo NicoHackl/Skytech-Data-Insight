@@ -24,6 +24,8 @@ def test_quantity_fallbacks():
     assert suggest_quantity("binary_sensor", {"device_class": "running"}) == "zustand"
     assert suggest_quantity("sensor", {"unit_of_measurement": "kW"}) == "leistung"
     assert suggest_quantity("sensor", {"device_class": "battery", "unit_of_measurement": "%"}) == "ladezustand"
+    assert suggest_quantity("sensor", {"unit_of_measurement": "€/kWh"}) == "preis"
+    assert suggest_quantity("sensor", {"unit_of_measurement": "ct/kWh"}) == "preis"
     assert suggest_quantity("sensor", {"unit_of_measurement": "l/min"}) == "sonstiges"
 
 

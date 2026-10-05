@@ -38,7 +38,7 @@ mit Grafana. Alle Namen sind deutsch.
 Datenmodell (Details: Werkzeug schema_anzeigen):
 - skytech.sensor: aufgezeichnete HA-Entitäten/Attribute mit kategorie (pv, speicher, netz, heizung,
   verbraucher, sonstiges), groesse (leistung, energie, ladezustand, temperatur, spannung, strom,
-  zustand, sonstiges), rolle (ist/soll), soll_ist_paar, einheit, anlage, energie_zaehler, aktiv.
+  zustand, preis, sonstiges), rolle (ist/soll), soll_ist_paar, einheit, anlage, energie_zaehler, aktiv.
 - skytech.messwert: Rohwerte bei jeder Änderung (zeit, sensor_id, wert, text_wert). on/off = 1/0.
 - skytech.messwert_1min: zeitgewichtete Minutenwerte (mittel, minimum, maximum, letzter, zuwachs,
   anzahl, abdeckung_s). zuwachs = Zählerzuwachs je Minute bei energie_zaehler-Sensoren (z. B. kWh).

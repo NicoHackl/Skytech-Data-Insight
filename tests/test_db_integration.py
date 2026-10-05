@@ -64,7 +64,8 @@ async def pools():
     collector_pool = await _pool("skytech_collector")
     async with app_pool.acquire() as connection:
         applied = await migration_runner.migrate(connection, migration_runner.discover(site_dir=Path("/nonexistent")))
-        assert [m.version for m in applied] == [1]
+        assert [m.version for m in applied] == [1, 2]
+        assert await connection.fetchval("SELECT bezeichnung FROM skytech.groesse WHERE schluessel = 'preis'") == "Preis"
     yield app_pool, collector_pool
     await collector_pool.close()
     await app_pool.close()
