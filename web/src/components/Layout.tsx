@@ -30,6 +30,9 @@ export function Layout() {
           <NavLink to="/sensoren" className={navClass}><Icon name="pulse" /><span>Sensoren</span></NavLink>
           <NavLink to="/sicherungen" className={navClass}><Icon name="safe" /><span>Sicherungen</span></NavLink>
 
+          <div className="nav-label">Verwaltung</div>
+          <NavLink to="/speicher" className={navClass}><Icon name="database" /><span>Speicher</span></NavLink>
+
           <div className="nav-label">Auswertung</div>
           {/* Grafana ist keine Route der SPA, sondern ein eigener Dienst im selben Ingress. */}
           <a href={GRAFANA_PATH} className="nav-item"><Icon name="chart" /><span>Grafana</span></a>

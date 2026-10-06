@@ -18,6 +18,7 @@ import asyncpg
 import backup
 import migration_runner
 import sensor_service
+import settings_service
 from display_time import format_berlin
 from grafana_client import GrafanaClient
 
@@ -238,22 +239,16 @@ class McpTools:
         return {"ok": True, "sicherung": backup_name}
 
     async def set_retention(self, raw_days: int | None, minute_days: int | None) -> dict[str, Any]:
-        for label, days in (("Rohwerte", raw_days), ("Minutenwerte", minute_days)):
-            if days is not None and days < 1:
-                raise ToolError(f"{label}: mindestens 1 Tag oder null für „nie löschen“.")
+        try:
+            raw_days, minute_days = settings_service.validate_retention(raw_days, minute_days)
+        except settings_service.RetentionError as exc:
+            raise ToolError(" ".join(exc.field_errors.values()) or str(exc)) from exc
         backup_name = await self._backup_before("Aufbewahrung ändern")
         async with self._pool.acquire() as connection:
             try:
-                async with connection.transaction():
-                    await connection.execute(
-                        "UPDATE skytech_config.einstellung SET wert = $1::jsonb, geaendert_am = now() "
-                        "WHERE schluessel = 'aufbewahrung_rohwerte_tage'", json.dumps(raw_days))
-                    await connection.execute(
-                        "UPDATE skytech_config.einstellung SET wert = $1::jsonb, geaendert_am = now() "
-                        "WHERE schluessel = 'aufbewahrung_minutenwerte_tage'", json.dumps(minute_days))
-                    await connection.execute("SELECT skytech_config.aufbewahrung_anwenden()")
-            except asyncpg.PostgresError as exc:
-                raise ToolError(f"Aufbewahrung nicht geändert: {exc}") from exc
+                await settings_service.set_retention(connection, raw_days, minute_days)
+            except settings_service.RetentionError as exc:
+                raise ToolError(str(exc)) from exc
         await self._log("aufbewahrung_geaendert", {"rohwerte_tage": raw_days, "minutenwerte_tage": minute_days,
                                                    "sicherung": backup_name})
         return {"rohwerte_tage": raw_days, "minutenwerte_tage": minute_days, "sicherung": backup_name}

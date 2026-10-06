@@ -131,3 +131,28 @@ export interface UploadResult {
   grafana: boolean
   beschreibung: { version?: string; erstellt?: string } | null
 }
+
+/* Speicher und Aufbewahrung (M3) */
+
+export interface StorageTable {
+  name: string
+  bytes: number
+  chunks: number
+  komprimiert: number
+}
+
+export interface StorageResponse {
+  datenbank_bytes: number
+  tabellen: StorageTable[]
+  /** Rohwerte je Berliner Tag, `tag` als TT.MM.JJJJ. */
+  rohwerte_je_tag: { tag: string; rohwerte: number; heute: boolean }[]
+  rohwerte_tag_mittel: number
+  /** Hochrechnung für ein Jahr Rohwerte, unkomprimiert. */
+  rohwerte_bytes_jahr: number
+}
+
+/** Tage; `null` = nie löschen. */
+export interface Retention {
+  rohwerte_tage: number | null
+  minutenwerte_tage: number | null
+}

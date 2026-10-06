@@ -179,7 +179,7 @@ export function Sicherungen() {
                   <div className="kv-row"><span className="k">Add-on-Version</span><span className="v">{uploaded.beschreibung.version}</span></div>
                 ) : null}
                 <div className="kv-row"><span className="k">Inhalt</span><span className="v">Datenbank{uploaded.grafana ? ' und Grafana' : ''}</span></div>
-                <div className="inline-actions upload-actions">
+                <div className="inline-actions card-actions">
                   <button type="button" className="btn btn-danger" disabled={!!inProgress}
                     onClick={() => void restore(uploaded.datei, uploaded.original)}>
                     <Icon name="refresh" size={16} />Jetzt einspielen

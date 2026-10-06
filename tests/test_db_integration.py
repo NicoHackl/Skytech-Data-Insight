@@ -364,3 +364,28 @@ async def test_mcp_schema_and_retention(mcp_tools):
     result = await tools.set_retention(400, None)
     assert result["rohwerte_tage"] == 400
     await tools.set_retention(365, None)
+
+
+# ---------------------------------------------------------------------------
+# Speicher und Aufbewahrung (M3)
+# ---------------------------------------------------------------------------
+
+async def test_storage_and_retention(clean):
+    import settings_service
+    app_pool, _ = clean
+    async with app_pool.acquire() as connection:
+        sensor_id = await _sensor(connection)
+        await connection.execute("INSERT INTO skytech.messwert (zeit, sensor_id, wert) VALUES (now(), $1, 1)", sensor_id)
+        info = await settings_service.storage(connection)
+        names = {row["name"] for row in info["tabellen"]}
+        assert {"messwert", "messwert_1min", "messwert_15min", "messwert_1h", "messwert_1d"} <= names
+        assert info["datenbank_bytes"] > 0 and info["rohwerte_je_tag"][-1]["rohwerte"] == 1
+        assert len(info["rohwerte_je_tag"][-1]["tag"]) == 10
+
+        await settings_service.set_retention(connection, 400, 60)
+        assert await settings_service.read_retention(connection) == {"rohwerte_tage": 400, "minutenwerte_tage": 60}
+        jobs = await connection.fetchval(
+            "SELECT count(*) FROM timescaledb_information.jobs WHERE proc_name = 'policy_retention'")
+        assert jobs == 2
+        await settings_service.set_retention(connection, 365, None)
+        assert await settings_service.read_retention(connection) == {"rohwerte_tage": 365, "minutenwerte_tage": None}

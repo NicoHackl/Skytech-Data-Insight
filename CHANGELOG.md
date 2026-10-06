@@ -16,6 +16,9 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ### Hinzugefügt
 
+- **Seite „Speicher"** (M3): Größe der Datenbank und jeder Tabelle, Stand der Kompression,
+  Rohwerte je Tag mit Hochrechnung pro Jahr, Aufbewahrung von Roh- und Minutenwerten änderbar.
+  Vor einer Änderung legt das Add-on automatisch eine Sicherung an (`vor_aenderung_*`).
 - **Größe „Preis"** (`preis`) für Tarif- und Börsenpreise wie €/kWh (System-Migration 0002).
   Neue Sensoren mit der Einheit €/kWh, ct/kWh oder €/MWh bekommen sie als Vorschlag.
 

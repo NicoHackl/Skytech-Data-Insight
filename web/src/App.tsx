@@ -5,6 +5,7 @@ import { Sensoren } from './pages/Sensoren'
 import { SensorenNeu } from './pages/SensorenNeu'
 import { SensorBearbeiten } from './pages/SensorBearbeiten'
 import { Sicherungen } from './pages/Sicherungen'
+import { Speicher } from './pages/Speicher'
 
 /* Ausschliesslich die Routentabelle. Das Layout ist Elternroute mit <Outlet />,
    damit Navigation und Kopfzeile beim Seitenwechsel nicht neu montiert werden.
@@ -18,6 +19,7 @@ export function App() {
         <Route path="/sensoren/neu" element={<SensorenNeu />} />
         <Route path="/sensoren/:id" element={<SensorBearbeiten />} />
         <Route path="/sicherungen" element={<Sicherungen />} />
+        <Route path="/speicher" element={<Speicher />} />
         <Route path="*" element={<div className="content"><div className="empty">Seite nicht gefunden.</div></div>} />
       </Route>
     </Routes>

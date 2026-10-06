@@ -1,5 +1,6 @@
 import type {
-  BackupFile, BackupsResponse, Catalog, HaEntity, Sensor, SensorDraft, SensorFieldsValue, StatusResponse, UploadResult,
+  BackupFile, BackupsResponse, Catalog, HaEntity, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse,
+  StorageResponse, UploadResult,
 } from './types'
 
 /* Einziger Ort im Frontend, an dem fetch aufgerufen wird. Basis-Pfad, Header und
@@ -52,6 +53,12 @@ export const api = {
     request<{ ok: boolean }>(`/sensors/${id}`, { method: 'PUT', body: JSON.stringify(changes) }),
   deleteSensor: (id: number) => request<{ ok: boolean }>(`/sensors/${id}`, { method: 'DELETE' }),
   haEntities: () => request<{ entities: HaEntity[] }>('/ha/entities').then((body) => body.entities),
+
+  /* Speicher und Aufbewahrung (M3). */
+  storage: () => request<StorageResponse>('/storage'),
+  retention: () => request<Retention>('/retention'),
+  updateRetention: (retention: Retention) =>
+    request<Retention & { sicherung: string }>('/retention', { method: 'PUT', body: JSON.stringify(retention) }),
 
   /* Sicherungen (M2). Downloads laufen als normale Links (BACKUP_*_PATH),
      damit der Browser große Dateien selbst speichert. */

@@ -48,6 +48,7 @@ Zusätzlich jederzeit: `pg_dump` über den LAN-Zugang (Port 5432, [datenbankzuga
 |---|---|
 | `mcp_` | 20 |
 | `manuell_` | 20 |
+| `vor_aenderung_` (vor einer Änderung der Aufbewahrung in der Oberfläche) | 10 |
 | `vor_wiederherstellung_` | 5 |
 | `upload_` | 5 |
 | `ha_wiederhergestellt_` | 3 |

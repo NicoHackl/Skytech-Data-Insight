@@ -662,7 +662,7 @@ table.data tbody tr:hover { background: var(--surface-2); cursor: pointer; }
 /* Sicherungen */
 table.data.static-rows tbody tr:hover { cursor: default; }
 .upload-result { margin-top: 16px; }
-.upload-actions { margin-top: 14px; }
+.card-actions { margin-top: 14px; }
 .info-strip .spinner { width: 16px; height: 16px; border-width: 2px; }
 
 @media (max-width: 620px) {

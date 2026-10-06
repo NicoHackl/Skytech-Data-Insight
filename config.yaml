@@ -35,6 +35,7 @@ backup_exclude:
   # es hat seinen eigenen Dump; so bleibt es klein.
   - "backup/mcp_*"
   - "backup/manuell_*"
+  - "backup/vor_aenderung_*"
   - "backup/upload_*"
   - "backup/vor_wiederherstellung_*"
   - "backup/ha_wiederhergestellt_*"

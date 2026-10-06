@@ -38,12 +38,14 @@ DUMP_TIMEOUT_S = 1800
 RESTORE_TIMEOUT_S = 3600
 
 # Wie viele Sicherungen je Art liegen bleiben; ältere werden gelöscht.
-KEEP = {"mcp": 20, "manuell": 20, "vor_wiederherstellung": 5, "upload": 5, "ha_wiederhergestellt": 3}
+KEEP = {"mcp": 20, "manuell": 20, "vor_aenderung": 10, "vor_wiederherstellung": 5, "upload": 5,
+        "ha_wiederhergestellt": 3}
 KEEP_PER_PREFIX = 20
 
 KINDS = {
     "mcp": "Vor MCP-Änderung",
     "manuell": "Manuell",
+    "vor_aenderung": "Vor Änderung in der Oberfläche",
     "vor_wiederherstellung": "Vor Wiederherstellung",
     "upload": "Hochgeladen",
     "ha_wiederhergestellt": "Aus HA-Backup eingespielt",

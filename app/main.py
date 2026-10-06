@@ -22,6 +22,7 @@ import database
 import health
 import migration_runner
 import sensor_service
+import settings_service
 from collector import Collector
 from display_time import BERLIN, format_berlin
 from ha_client import HAClient, connection_settings
@@ -302,6 +303,43 @@ class AdminService:
         return json_response({"entities": entities})
 
     # ------------------------------------------------------------------
+    # Speicher und Aufbewahrung (M3)
+    # ------------------------------------------------------------------
+
+    async def handle_storage(self, _request: web.Request) -> web.Response:
+        async with self._require_database().acquire() as connection:
+            return json_response(await settings_service.storage(connection))
+
+    async def handle_retention(self, _request: web.Request) -> web.Response:
+        async with self._require_database().acquire() as connection:
+            return json_response(await settings_service.read_retention(connection))
+
+    async def handle_update_retention(self, request: web.Request) -> web.Response:
+        body = await self._json_body(request)
+        # Beide Werte sind Pflicht: ein fehlender Schlüssel hieße sonst still „nie löschen“.
+        if not isinstance(body, dict) or not {"rohwerte_tage", "minutenwerte_tage"} <= body.keys():
+            return error_response("Erwartet: {\"rohwerte_tage\": …, \"minutenwerte_tage\": …}", 400)
+        try:
+            raw_days, minute_days = settings_service.validate_retention(
+                body.get("rohwerte_tage"), body.get("minutenwerte_tage"))
+        except settings_service.RetentionError as exc:
+            return error_response(str(exc), 422, exc.field_errors)
+        pool = self._require_database()
+        # Eine kürzere Aufbewahrung löscht Daten – deshalb vorher sichern.
+        try:
+            created = await backup.create("vor_aenderung")
+        except backup.BackupError as exc:
+            return error_response(f"{exc} – Aufbewahrung wurde nicht geändert.", 500)
+        async with pool.acquire() as connection:
+            try:
+                await settings_service.set_retention(connection, raw_days, minute_days)
+            except settings_service.RetentionError as exc:
+                return error_response(str(exc), 422)
+            await sensor_service.log_change(connection, request_user(request), "aufbewahrung_geaendert", {
+                "rohwerte_tage": raw_days, "minutenwerte_tage": minute_days, "sicherung": created.name})
+        return json_response({"rohwerte_tage": raw_days, "minutenwerte_tage": minute_days, "sicherung": created.name})
+
+    # ------------------------------------------------------------------
     # Sicherungen (M2)
     # ------------------------------------------------------------------
 
@@ -434,6 +472,9 @@ class AdminService:
         app.router.add_put(r"/api/sensors/{sensor_id:\d+}", self.handle_update_sensor)
         app.router.add_delete(r"/api/sensors/{sensor_id:\d+}", self.handle_delete_sensor)
         app.router.add_get("/api/ha/entities", self.handle_entities)
+        app.router.add_get("/api/storage", self.handle_storage)
+        app.router.add_get("/api/retention", self.handle_retention)
+        app.router.add_put("/api/retention", self.handle_update_retention)
         app.router.add_get("/api/backups", self.handle_backups)
         app.router.add_post("/api/backups", self.handle_create_backup)
         app.router.add_get("/api/backups/download", self.handle_download_archive)

@@ -73,6 +73,16 @@ Alle HA-Entitäten aus dem Zustandsabbild des Collectors, je Entität mit `name`
 `vorschlag` (vorbefüllter Sensor) und `attribute` (nur Attribute mit Zahlenwert, je mit `erfasst`
 und `vorschlag`). `503` ohne HA-Verbindung.
 
+## Speicher und Aufbewahrung (M3)
+
+| Aufruf | Wirkung |
+|---|---|
+| `GET api/storage` | `{datenbank_bytes, tabellen: [{name, bytes, chunks, komprimiert}], rohwerte_je_tag: [{tag, rohwerte, heute}], rohwerte_tag_mittel, rohwerte_bytes_jahr}` – `tabellen` in fester Reihenfolge Roh-, Minutenwerte, Verdichtungen; `tag` als `TT.MM.JJJJ` (Berliner Tag, die letzten 7 Tage plus heute); die Hochrechnung pro Jahr ist unkomprimiert |
+| `GET api/retention` | `{rohwerte_tage, minutenwerte_tage}` – Tage, `null` = nie löschen |
+| `PUT api/retention` | Body mit **beiden** Schlüsseln (fehlt einer: `400`). Rohwerte ≥ 1, Minutenwerte ≥ 31 Tage oder `null`; sonst `422` mit `field_errors`. Legt vorher eine Sicherung `vor_aenderung_*.dump` an, wendet die Aufbewahrung sofort an und protokolliert `aufbewahrung_geaendert`. Antwort mit `sicherung` |
+
+Dieselbe Logik nutzt das MCP-Werkzeug `aufbewahrung_setzen` (`app/settings_service.py`).
+
 ## Sicherungen (M2)
 
 | Aufruf | Wirkung |
