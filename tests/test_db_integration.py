@@ -389,3 +389,18 @@ async def test_storage_and_retention(clean):
         assert jobs == 2
         await settings_service.set_retention(connection, 365, None)
         assert await settings_service.read_retention(connection) == {"rohwerte_tage": 365, "minutenwerte_tage": None}
+
+
+async def test_change_log_paging_and_filter(clean):
+    app_pool, _ = clean
+    async with app_pool.acquire() as connection:
+        await connection.execute("TRUNCATE skytech_config.aenderungsprotokoll")
+        for number in range(5):
+            await sensor_service.log_change(connection, "nico", "test", {"nr": number},
+                                            source="mcp" if number % 2 else "ui")
+        first, more = await sensor_service.list_changes(connection, limit=2)
+        assert [entry["details"]["nr"] for entry in first] == [4, 3] and more
+        rest, more = await sensor_service.list_changes(connection, before_id=first[-1]["id"], limit=10)
+        assert [entry["details"]["nr"] for entry in rest] == [2, 1, 0] and not more
+        mcp, _ = await sensor_service.list_changes(connection, source="mcp")
+        assert {entry["quelle"] for entry in mcp} == {"mcp"} and len(mcp) == 2

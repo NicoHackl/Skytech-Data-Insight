@@ -112,6 +112,29 @@ async def log_change(connection: asyncpg.Connection, user: str | None, action: s
     )
 
 
+LOG_SOURCES = ("ui", "mcp", "system")
+LOG_PAGE_MAX = 200
+
+
+async def list_changes(connection: asyncpg.Connection, source: str | None = None, before_id: int | None = None,
+                       limit: int = 50) -> tuple[list[dict[str, Any]], bool]:
+    """Neueste Einträge des Änderungsprotokolls zuerst, blätterbar über `before_id`.
+
+    Gibt die Einträge und zurück, ob es ältere gibt.
+    """
+    limit = max(1, min(limit, LOG_PAGE_MAX))
+    rows = await connection.fetch(
+        """
+        SELECT id, zeit, quelle, benutzer, aktion, details FROM skytech_config.aenderungsprotokoll
+        WHERE ($1::text IS NULL OR quelle = $1) AND ($2::bigint IS NULL OR id < $2)
+        ORDER BY id DESC LIMIT $3
+        """,
+        source, before_id, limit + 1,
+    )
+    entries = [{**dict(row), "details": json.loads(row["details"])} for row in rows[:limit]]
+    return entries, len(rows) > limit
+
+
 async def list_sensors(connection: asyncpg.Connection) -> list[dict[str, Any]]:
     return [dict(row) for row in await connection.fetch(SENSOR_LIST_SQL)]
 

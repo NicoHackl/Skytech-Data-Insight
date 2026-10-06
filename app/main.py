@@ -340,6 +340,25 @@ class AdminService:
         return json_response({"rohwerte_tage": raw_days, "minutenwerte_tage": minute_days, "sicherung": created.name})
 
     # ------------------------------------------------------------------
+    # Protokoll (M3)
+    # ------------------------------------------------------------------
+
+    async def handle_log(self, request: web.Request) -> web.Response:
+        source = request.query.get("quelle") or None
+        if source is not None and source not in sensor_service.LOG_SOURCES:
+            return error_response("Unbekannte Quelle.", 400)
+        try:
+            before_id = int(request.query["vor"]) if request.query.get("vor") else None
+            limit = int(request.query.get("limit", "50"))
+        except ValueError:
+            return error_response("„vor“ und „limit“ müssen Zahlen sein.", 400)
+        async with self._require_database().acquire() as connection:
+            entries, more = await sensor_service.list_changes(connection, source, before_id, limit)
+        for entry in entries:
+            entry["zeit_text"] = format_berlin(entry["zeit"])
+        return json_response({"eintraege": entries, "weitere": more})
+
+    # ------------------------------------------------------------------
     # Sicherungen (M2)
     # ------------------------------------------------------------------
 
@@ -475,6 +494,7 @@ class AdminService:
         app.router.add_get("/api/storage", self.handle_storage)
         app.router.add_get("/api/retention", self.handle_retention)
         app.router.add_put("/api/retention", self.handle_update_retention)
+        app.router.add_get("/api/log", self.handle_log)
         app.router.add_get("/api/backups", self.handle_backups)
         app.router.add_post("/api/backups", self.handle_create_backup)
         app.router.add_get("/api/backups/download", self.handle_download_archive)

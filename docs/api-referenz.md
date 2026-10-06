@@ -83,6 +83,13 @@ und `vorschlag`). `503` ohne HA-Verbindung.
 
 Dieselbe Logik nutzt das MCP-Werkzeug `aufbewahrung_setzen` (`app/settings_service.py`).
 
+## `GET api/log` (M3)
+
+Änderungsprotokoll, neueste zuerst. Parameter: `quelle` (`ui`, `mcp`, `system`; leer = alle),
+`vor` (id – nur ältere Einträge), `limit` (1–200, Standard 50). Antwort
+`{"eintraege": [{id, zeit, zeit_text, quelle, benutzer, aktion, details}], "weitere": bool}`;
+`zeit_text` in Berliner Zeit. `400` bei unbekannter Quelle oder nicht numerischen Parametern.
+
 ## Sicherungen (M2)
 
 | Aufruf | Wirkung |

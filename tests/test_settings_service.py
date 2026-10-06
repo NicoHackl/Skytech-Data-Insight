@@ -36,3 +36,11 @@ async def test_retention_api_validates_before_database():
         # Gültig, aber ohne Datenbank: 503 statt still nichts zu tun.
         valid = await client.put("/api/retention", json={"rohwerte_tage": 365, "minutenwerte_tage": None})
         assert valid.status == 503
+
+
+async def test_log_api_rejects_bad_parameters():
+    service = main.AdminService(ingress_entry="", version="test", start_backend=False)
+    async with TestClient(TestServer(service.build_app())) as client:
+        assert (await client.get("/api/log?quelle=vscode")).status == 400
+        assert (await client.get("/api/log?vor=abc")).status == 400
+        assert (await client.get("/api/log?quelle=mcp")).status == 503

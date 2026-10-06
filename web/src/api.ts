@@ -1,5 +1,5 @@
 import type {
-  BackupFile, BackupsResponse, Catalog, HaEntity, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse,
+  BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse,
   StorageResponse, UploadResult,
 } from './types'
 
@@ -59,6 +59,14 @@ export const api = {
   retention: () => request<Retention>('/retention'),
   updateRetention: (retention: Retention) =>
     request<Retention & { sicherung: string }>('/retention', { method: 'PUT', body: JSON.stringify(retention) }),
+
+  /* Protokoll (M3): neueste zuerst, ältere über die id des letzten Eintrags. */
+  log: (source: LogSource | '', beforeId?: number) => {
+    const query = new URLSearchParams({ limit: '50' })
+    if (source) query.set('quelle', source)
+    if (beforeId !== undefined) query.set('vor', String(beforeId))
+    return request<LogResponse>(`/log?${query.toString()}`)
+  },
 
   /* Sicherungen (M2). Downloads laufen als normale Links (BACKUP_*_PATH),
      damit der Browser große Dateien selbst speichert. */

@@ -156,3 +156,23 @@ export interface Retention {
   rohwerte_tage: number | null
   minutenwerte_tage: number | null
 }
+
+/* Protokoll (M3) */
+
+export type LogSource = 'ui' | 'mcp' | 'system'
+
+export interface LogEntry {
+  id: number
+  zeit: string
+  /** TT.MM.JJJJ hh:mm:ss in Berliner Zeit. */
+  zeit_text: string
+  quelle: LogSource
+  benutzer: string | null
+  aktion: string
+  details: Record<string, unknown>
+}
+
+export interface LogResponse {
+  eintraege: LogEntry[]
+  weitere: boolean
+}

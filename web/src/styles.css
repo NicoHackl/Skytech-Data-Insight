@@ -659,6 +659,10 @@ table.data tbody tr:hover { background: var(--surface-2); cursor: pointer; }
 
 .table-switch { margin-bottom: 0; }
 
+/* Technischer Text: Protokolldetails, SQL der Migrationen */
+.code-details summary { cursor: pointer; color: var(--text-2); font-size: 13px; }
+.code-block { margin: 8px 0 0; padding: 12px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12.5px; line-height: 1.5; color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
+
 /* Sicherungen */
 table.data.static-rows tbody tr:hover { cursor: default; }
 .upload-result { margin-top: 16px; }
