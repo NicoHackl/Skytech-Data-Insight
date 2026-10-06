@@ -33,6 +33,7 @@ export function Layout() {
           <div className="nav-label">Verwaltung</div>
           <NavLink to="/speicher" className={navClass}><Icon name="database" /><span>Speicher</span></NavLink>
           <NavLink to="/protokoll" className={navClass}><Icon name="list" /><span>Protokoll</span></NavLink>
+          <NavLink to="/migrationen" className={navClass}><Icon name="layers" /><span>Migrationen</span></NavLink>
 
           <div className="nav-label">Auswertung</div>
           {/* Grafana ist keine Route der SPA, sondern ein eigener Dienst im selben Ingress. */}

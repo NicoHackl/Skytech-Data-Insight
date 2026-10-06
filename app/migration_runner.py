@@ -97,3 +97,31 @@ async def migrate(connection: asyncpg.Connection, migrations: list[Migration]) -
         except asyncpg.PostgresError as exc:
             raise MigrationError(f"Migration {migration.path.name} fehlgeschlagen: {exc}") from exc
     return pending
+
+
+async def overview(connection: asyncpg.Connection, migrations: list[Migration]) -> list[dict]:
+    """Stand je Migration für die Oberfläche: Dateien und Datenbank abgeglichen.
+
+    Status: `angewendet`, `ausstehend`, `geaendert` (Datei nach dem Anwenden
+    verändert) oder `datei_fehlt` (angewendet, Datei aber nicht mehr vorhanden).
+    """
+    rows = []
+    if await connection.fetchval("SELECT to_regclass('skytech_config.migration') IS NOT NULL"):
+        rows = await connection.fetch(
+            "SELECT version, name, quelle, checksumme, angewendet_am FROM skytech_config.migration")
+    applied = {row["version"]: row for row in rows}
+    result = []
+    for migration in migrations:
+        row = applied.pop(migration.version, None)
+        if row is None:
+            status = "ausstehend"
+        elif row["checksumme"] != migration.checksum:
+            status = "geaendert"
+        else:
+            status = "angewendet"
+        result.append({"version": migration.version, "name": migration.name, "quelle": migration.source,
+                       "status": status, "angewendet_am": row["angewendet_am"] if row else None})
+    for row in applied.values():
+        result.append({"version": row["version"], "name": row["name"], "quelle": row["quelle"],
+                       "status": "datei_fehlt", "angewendet_am": row["angewendet_am"]})
+    return sorted(result, key=lambda item: item["version"])

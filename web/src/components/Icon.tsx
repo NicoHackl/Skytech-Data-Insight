@@ -46,6 +46,10 @@ const paths: Record<string, ReactElement> = {
   database: <><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" /><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" /></>,
   /* Liniendiagramm — Grafana, Auswertung. */
   chart: <><path d="M3 3v18h18" /><path d="m7 15 4-4 3 3 6-6" /></>,
+  /* Ebenen — Migrationen, Schichten des Schemas. */
+  layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></>,
+  /* Schlüssel — Zugänge, Passwörter, Token. */
+  key: <><circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.7 12.3 9.3-9.3M16 7l3 3M14 9l2 2" /></>,
   flow: <><circle cx="5" cy="12" r="2" /><circle cx="19" cy="5" r="2" /><circle cx="19" cy="19" r="2" /><path d="M7 12h4M11 12l6-6M11 12l6 6" /></>,
 }
 

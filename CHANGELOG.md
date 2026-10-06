@@ -21,6 +21,8 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
   Vor einer Änderung legt das Add-on automatisch eine Sicherung an (`vor_aenderung_*`).
 - **Seite „Protokoll"** (M3): alle Änderungen aus Oberfläche, MCP und System mit Benutzer und
   Details, Filter nach Quelle, ältere Einträge seitenweise.
+- **Seite „Migrationen"** (M3): Stand aller System- und Anlagen-Migrationen mit SQL-Inhalt;
+  eine nach dem Anwenden veränderte Datei wird rot markiert.
 - **Größe „Preis"** (`preis`) für Tarif- und Börsenpreise wie €/kWh (System-Migration 0002).
   Neue Sensoren mit der Einheit €/kWh, ct/kWh oder €/MWh bekommen sie als Vorschlag.
 

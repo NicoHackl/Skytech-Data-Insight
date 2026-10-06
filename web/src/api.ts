@@ -1,6 +1,6 @@
 import type {
-  BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse,
-  StorageResponse, UploadResult,
+  BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource, MigrationSql, MigrationsResponse, Retention,
+  Sensor, SensorDraft, SensorFieldsValue, StatusResponse, StorageResponse, UploadResult,
 } from './types'
 
 /* Einziger Ort im Frontend, an dem fetch aufgerufen wird. Basis-Pfad, Header und
@@ -67,6 +67,10 @@ export const api = {
     if (beforeId !== undefined) query.set('vor', String(beforeId))
     return request<LogResponse>(`/log?${query.toString()}`)
   },
+
+  /* Migrationen (M3, nur lesend). */
+  migrations: () => request<MigrationsResponse>('/migrations'),
+  migrationSql: (version: number) => request<MigrationSql>(`/migrations/${version}`),
 
   /* Sicherungen (M2). Downloads laufen als normale Links (BACKUP_*_PATH),
      damit der Browser große Dateien selbst speichert. */

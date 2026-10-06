@@ -176,3 +176,28 @@ export interface LogResponse {
   eintraege: LogEntry[]
   weitere: boolean
 }
+
+/* Migrationen (M3) */
+
+export type MigrationStatus = 'angewendet' | 'ausstehend' | 'geaendert' | 'datei_fehlt'
+
+export interface MigrationItem {
+  version: number
+  name: string
+  quelle: 'system' | 'anlage'
+  status: MigrationStatus
+  /** TT.MM.JJJJ hh:mm:ss in Berliner Zeit; `null` = noch nicht angewendet. */
+  angewendet_am: string | null
+}
+
+export interface MigrationsResponse {
+  migrationen: MigrationItem[]
+  /** Fehler beim Start, der eine Migration betrifft. */
+  fehler: string | null
+}
+
+export interface MigrationSql {
+  version: number
+  datei: string
+  sql: string
+}

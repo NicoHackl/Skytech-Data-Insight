@@ -90,6 +90,13 @@ Dieselbe Logik nutzt das MCP-Werkzeug `aufbewahrung_setzen` (`app/settings_servi
 `{"eintraege": [{id, zeit, zeit_text, quelle, benutzer, aktion, details}], "weitere": bool}`;
 `zeit_text` in Berliner Zeit. `400` bei unbekannter Quelle oder nicht numerischen Parametern.
 
+## Migrationen (M3, nur lesend)
+
+| Aufruf | Wirkung |
+|---|---|
+| `GET api/migrations` | `{"migrationen": [{version, name, quelle, status, angewendet_am}], "fehler"}` – Dateien (System und `/data/migrations`) mit `skytech_config.migration` abgeglichen. `status`: `angewendet`, `ausstehend`, `geaendert` (Datei nach dem Anwenden verändert – Start der Aufzeichnung scheitert), `datei_fehlt` (angewendet, Datei nicht mehr da). `angewendet_am` in Berliner Zeit. `fehler`: Startfehler, der eine Migration betrifft |
+| `GET api/migrations/{version}` | `{version, datei, sql}`; `404`, wenn die Datei fehlt |
+
 ## Sicherungen (M2)
 
 | Aufruf | Wirkung |

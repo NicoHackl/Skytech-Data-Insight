@@ -44,3 +44,14 @@ async def test_log_api_rejects_bad_parameters():
         assert (await client.get("/api/log?quelle=vscode")).status == 400
         assert (await client.get("/api/log?vor=abc")).status == 400
         assert (await client.get("/api/log?quelle=mcp")).status == 503
+
+
+async def test_migration_sql_unknown_version_is_404(monkeypatch, tmp_path):
+    import migration_runner
+    monkeypatch.setattr(migration_runner, "SITE_DIR", tmp_path)
+    service = main.AdminService(ingress_entry="", version="test", start_backend=False)
+    async with TestClient(TestServer(service.build_app())) as client:
+        assert (await client.get("/api/migrations/9999")).status == 404
+        found = await client.get("/api/migrations/2")
+        assert found.status == 200
+        assert "preis" in (await found.json())["sql"]

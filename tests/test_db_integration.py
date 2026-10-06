@@ -404,3 +404,22 @@ async def test_change_log_paging_and_filter(clean):
         assert [entry["details"]["nr"] for entry in rest] == [2, 1, 0] and not more
         mcp, _ = await sensor_service.list_changes(connection, source="mcp")
         assert {entry["quelle"] for entry in mcp} == {"mcp"} and len(mcp) == 2
+
+
+async def test_migration_overview_states(pools, tmp_path):
+    app_pool, _ = pools
+    site = tmp_path / "anlage"
+    site.mkdir()
+    (site / "1900_offen.sql").write_text("SELECT 1;", encoding="utf-8")
+    async with app_pool.acquire() as connection:
+        items = await migration_runner.overview(connection, migration_runner.discover(site_dir=site))
+        states = {item["version"]: item["status"] for item in items}
+        assert states[1] == states[2] == "angewendet" and states[1900] == "ausstehend"
+
+        changed = tmp_path / "sql"
+        changed.mkdir()
+        original = (migration_runner.SYSTEM_DIR / "0001_grundschema.sql").read_text(encoding="utf-8")
+        (changed / "0001_grundschema.sql").write_text(original + "\n-- geändert\n", encoding="utf-8")
+        items = await migration_runner.overview(connection, migration_runner.discover(changed, tmp_path / "leer"))
+        states = {item["version"]: item["status"] for item in items}
+        assert states[1] == "geaendert" and states[2] == "datei_fehlt"

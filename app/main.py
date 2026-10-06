@@ -359,6 +359,34 @@ class AdminService:
         return json_response({"eintraege": entries, "weitere": more})
 
     # ------------------------------------------------------------------
+    # Migrationen (M3, nur lesend)
+    # ------------------------------------------------------------------
+
+    async def handle_migrations(self, _request: web.Request) -> web.Response:
+        try:
+            migrations = migration_runner.discover()
+        except migration_runner.MigrationError as exc:
+            return json_response({"migrationen": [], "fehler": str(exc)})
+        async with self._require_database().acquire() as connection:
+            items = await migration_runner.overview(connection, migrations)
+        for item in items:
+            applied = item.pop("angewendet_am")
+            item["angewendet_am"] = format_berlin(applied) if applied else None
+        # Ein Fehler beim Start betrifft meist eine Migration – er gehört auf diese Seite.
+        error = self.startup_error if self.startup_error and "Migration" in self.startup_error else None
+        return json_response({"migrationen": items, "fehler": error})
+
+    async def handle_migration_sql(self, request: web.Request) -> web.Response:
+        version = int(request.match_info["version"])
+        try:
+            migration = next((m for m in migration_runner.discover() if m.version == version), None)
+        except migration_runner.MigrationError as exc:
+            return error_response(str(exc), 500)
+        if migration is None:
+            return error_response("Migration nicht gefunden (Datei fehlt).", 404)
+        return json_response({"version": migration.version, "datei": migration.path.name, "sql": migration.sql})
+
+    # ------------------------------------------------------------------
     # Sicherungen (M2)
     # ------------------------------------------------------------------
 
@@ -495,6 +523,8 @@ class AdminService:
         app.router.add_get("/api/retention", self.handle_retention)
         app.router.add_put("/api/retention", self.handle_update_retention)
         app.router.add_get("/api/log", self.handle_log)
+        app.router.add_get("/api/migrations", self.handle_migrations)
+        app.router.add_get(r"/api/migrations/{version:\d+}", self.handle_migration_sql)
         app.router.add_get("/api/backups", self.handle_backups)
         app.router.add_post("/api/backups", self.handle_create_backup)
         app.router.add_get("/api/backups/download", self.handle_download_archive)
