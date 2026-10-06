@@ -8,6 +8,12 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 06.10.2026
+
+- Gemeinsame Contract-Ablage mit einem Ordner je Projektpaar und aktualisierten Verweisen.
+- Ablagekonvention vorbereitet; kein neuer bilateraler Laufzeitvertrag eingeführt.
+
+
 ### Hinzugefügt
 
 - **Größe „Preis"** (`preis`) für Tarif- und Börsenpreise wie €/kWh (System-Migration 0002).
