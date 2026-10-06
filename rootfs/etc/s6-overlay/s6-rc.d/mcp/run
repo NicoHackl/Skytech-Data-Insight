@@ -4,6 +4,12 @@
 source /usr/lib/skytech/lib.sh
 
 token=$(skytech::option mcp_token)
+if skytech::has_supervisor; then
+    # /data/options.json schreibt der Supervisor erst beim Start des Add-ons neu.
+    # Nach „Neu erzeugen“ auf der Seite „Zugänge“ startet nur dieser Dienst neu –
+    # deshalb gilt der Wert aus der Supervisor-API, die Datei nur als Rückfall (D-025).
+    token=$(bashio::config 'mcp_token' "${token}")
+fi
 if [[ ${#token} -lt 16 ]]; then
     if [[ -n "${token}" ]]; then
         bashio::log.warning "mcp_token ist kürzer als 16 Zeichen – MCP-Server bleibt aus."

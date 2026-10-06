@@ -1,6 +1,7 @@
 import type {
-  BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource, MigrationSql, MigrationsResponse, Retention,
-  Sensor, SensorDraft, SensorFieldsValue, StatusResponse, StorageResponse, UploadResult,
+  AccessChangeResult, AccessKey, AccessResponse, BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource,
+  MigrationSql, MigrationsResponse, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse, StorageResponse,
+  UploadResult,
 } from './types'
 
 /* Einziger Ort im Frontend, an dem fetch aufgerufen wird. Basis-Pfad, Header und
@@ -71,6 +72,11 @@ export const api = {
   /* Migrationen (M3, nur lesend). */
   migrations: () => request<MigrationsResponse>('/migrations'),
   migrationSql: (version: number) => request<MigrationSql>(`/migrations/${version}`),
+
+  /* Zugänge (M3, D-025). Die Bestätigung wiederholt den Schlüssel des Zugangs. */
+  access: () => request<AccessResponse>('/access'),
+  changeAccess: (key: AccessKey, action: 'neu' | 'sperren') =>
+    request<AccessChangeResult>(`/access/${key}/${action}`, { method: 'POST', body: JSON.stringify({ bestaetigung: key }) }),
 
   /* Sicherungen (M2). Downloads laufen als normale Links (BACKUP_*_PATH),
      damit der Browser große Dateien selbst speichert. */

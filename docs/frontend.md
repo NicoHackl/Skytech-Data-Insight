@@ -113,6 +113,10 @@ Seitenwechsel nicht neu montiert werden.
     <Route path="/sensoren/neu" element={<SensorenNeu />} />
     <Route path="/sensoren/:id" element={<SensorBearbeiten />} />
     <Route path="/sicherungen" element={<Sicherungen />} />
+    <Route path="/speicher" element={<Speicher />} />
+    <Route path="/protokoll" element={<Protokoll />} />
+    <Route path="/migrationen" element={<Migrationen />} />
+    <Route path="/zugaenge" element={<Zugaenge />} />
     <Route path="*" element={<div className="content"><div className="empty">Seite nicht gefunden.</div></div>} />
   </Route>
 </Routes>

@@ -120,7 +120,7 @@ export function Uebersicht() {
                 <div className="hint-box">
                   Über das Home-Assistant-Seitenmenü sind Sie in Grafana automatisch angemeldet.
                   Im LAN ist Grafana zusätzlich unter Port 3000 erreichbar – dort mit dem
-                  Grafana-Benutzer „admin" und dem Passwort aus der Add-on-Konfiguration.
+                  Grafana-Benutzer „admin" und dem Passwort von der Seite „Zugänge".
                 </div>
               </div>
             </div>
@@ -140,9 +140,8 @@ export function Uebersicht() {
                 <div className="kv-row"><span className="k">Nur lesen</span><span className="v mono">skytech_reader</span></div>
                 <div className="kv-row"><span className="k">Verschlüsselung</span><span className="v">aus (sslmode=disable)</span></div>
                 <div className="hint-box">
-                  Passwörter werden in der Add-on-Konfiguration gesetzt (<span className="mono">db_password</span>,{' '}
-                  <span className="mono">db_readonly_password</span>); ohne Passwort ist die Anmeldung gesperrt.
-                  Port 5432 nie ins Internet freigeben.
+                  Passwörter auf der Seite <Link to="/zugaenge">Zugänge</Link> neu erzeugen oder sperren; ohne Passwort
+                  ist die Anmeldung gesperrt. Port 5432 nie ins Internet freigeben.
                 </div>
               </div>
             </div>

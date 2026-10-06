@@ -8,6 +8,7 @@ import { Sicherungen } from './pages/Sicherungen'
 import { Speicher } from './pages/Speicher'
 import { Protokoll } from './pages/Protokoll'
 import { Migrationen } from './pages/Migrationen'
+import { Zugaenge } from './pages/Zugaenge'
 
 /* Ausschliesslich die Routentabelle. Das Layout ist Elternroute mit <Outlet />,
    damit Navigation und Kopfzeile beim Seitenwechsel nicht neu montiert werden.
@@ -24,6 +25,7 @@ export function App() {
         <Route path="/speicher" element={<Speicher />} />
         <Route path="/protokoll" element={<Protokoll />} />
         <Route path="/migrationen" element={<Migrationen />} />
+        <Route path="/zugaenge" element={<Zugaenge />} />
         <Route path="*" element={<div className="content"><div className="empty">Seite nicht gefunden.</div></div>} />
       </Route>
     </Routes>

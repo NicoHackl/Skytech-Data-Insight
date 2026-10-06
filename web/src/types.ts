@@ -201,3 +201,33 @@ export interface MigrationSql {
   datei: string
   sql: string
 }
+
+/* Zugänge (M3, D-025) */
+
+export type AccessKey = 'datenbank' | 'datenbank_lesen' | 'grafana' | 'mcp'
+
+export interface AccessItem {
+  schluessel: AccessKey
+  bezeichnung: string
+  option: string
+  benutzer: string | null
+  /** `null` = unbekannt (lokaler Test ohne Supervisor). */
+  gesetzt: boolean | null
+  /** Port im LAN; `null` = nicht freigegeben oder unbekannt. */
+  port: number | null
+}
+
+export interface AccessResponse {
+  verfuegbar: boolean
+  /** IPv4-Adresse des HA-Hosts; `null`, wenn nicht ermittelbar. */
+  host: string | null
+  zugaenge: AccessItem[]
+}
+
+export interface AccessChangeResult {
+  zugang: AccessKey
+  /** Nur bei „neu erzeugen“ und nur in dieser einen Antwort. */
+  secret: string | null
+  /** Gespeichert, aber erst nach einem Neustart wirksam. */
+  warnung: string | null
+}

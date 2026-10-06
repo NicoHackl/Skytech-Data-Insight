@@ -97,6 +97,18 @@ Dieselbe Logik nutzt das MCP-Werkzeug `aufbewahrung_setzen` (`app/settings_servi
 | `GET api/migrations` | `{"migrationen": [{version, name, quelle, status, angewendet_am}], "fehler"}` – Dateien (System und `/data/migrations`) mit `skytech_config.migration` abgeglichen. `status`: `angewendet`, `ausstehend`, `geaendert` (Datei nach dem Anwenden verändert – Start der Aufzeichnung scheitert), `datei_fehlt` (angewendet, Datei nicht mehr da). `angewendet_am` in Berliner Zeit. `fehler`: Startfehler, der eine Migration betrifft |
 | `GET api/migrations/{version}` | `{version, datei, sql}`; `404`, wenn die Datei fehlt |
 
+## Zugänge (M3, D-025)
+
+| Aufruf | Wirkung |
+|---|---|
+| `GET api/access` | `{verfuegbar, host, zugaenge: [{schluessel, bezeichnung, option, benutzer, gesetzt, port}]}` – `schluessel`: `datenbank`, `datenbank_lesen`, `grafana`, `mcp`. `gesetzt` nur als Ja/Nein (MCP: erst ab 16 Zeichen), nie der Wert. `port` = Port im LAN, `null` = nicht freigegeben. `host` = IPv4 der primären Schnittstelle des HA-Hosts. Ohne Supervisor (lokaler Test) `verfuegbar: false` |
+| `POST api/access/{schluessel}/neu` | Body `{"bestaetigung": "<schluessel>"}`. Erzeugt ein Secret (32 Zeichen), speichert es in den Add-on-Optionen und wendet es sofort an. Antwort `{zugang, secret, warnung}` mit `Cache-Control: no-store` – das Secret steht **nur hier**. `warnung` gesetzt: gespeichert, aber erst nach einem Neustart wirksam |
+| `POST api/access/{schluessel}/sperren` | wie oben, leert die Option und sperrt den Zugang (`secret: null`) |
+
+Fehler: `400` ohne passende Bestätigung, `404` unbekannter Zugang, `403` fehlende
+Supervisor-Rolle, `502` Supervisor lehnt ab (nichts geändert), `503` ohne Supervisor.
+Protokoll: `zugang_neu` bzw. `zugang_gesperrt` mit Zugang und ggf. Warnung.
+
 ## Sicherungen (M2)
 
 | Aufruf | Wirkung |

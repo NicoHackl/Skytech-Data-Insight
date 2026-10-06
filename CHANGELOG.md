@@ -14,7 +14,7 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 - Ablagekonvention vorbereitet; kein neuer bilateraler Laufzeitvertrag eingeführt.
 
 
-### Hinzugefügt
+### Hinzugefügt (Meilenstein M3, Version 0.5.0)
 
 - **Seite „Speicher"** (M3): Größe der Datenbank und jeder Tabelle, Stand der Kompression,
   Rohwerte je Tag mit Hochrechnung pro Jahr, Aufbewahrung von Roh- und Minutenwerten änderbar.
@@ -23,6 +23,20 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
   Details, Filter nach Quelle, ältere Einträge seitenweise.
 - **Seite „Migrationen"** (M3): Stand aller System- und Anlagen-Migrationen mit SQL-Inhalt;
   eine nach dem Anwenden veränderte Datei wird rot markiert.
+- **Seite „Zugänge"** (M3, D-025): Verbindungsdaten für VSCode, Grafana im LAN und MCP mit
+  Adresse des HA-Hosts und freigegebenem Port. Passwörter und MCP-Token lassen sich neu erzeugen
+  oder sperren – sofort wirksam, ohne Neustart des Add-ons; das neue Secret wird genau einmal
+  angezeigt. Dafür braucht das Add-on die Supervisor-Rolle `manager`.
+
+### Geändert (Version 0.5.0)
+
+- Der MCP-Server liest `mcp_token` beim Start über die Supervisor-API, damit ein neu erzeugtes
+  Token ohne Neustart des Add-ons gilt.
+- Das MCP-Werkzeug `aufbewahrung_setzen` prüft Minutenwerte jetzt vorab auf mindestens 31 Tage
+  (gemeinsame Logik mit der Seite „Speicher").
+
+### Hinzugefügt (Version 0.4.3)
+
 - **Größe „Preis"** (`preis`) für Tarif- und Börsenpreise wie €/kWh (System-Migration 0002).
   Neue Sensoren mit der Einheit €/kWh, ct/kWh oder €/MWh bekommen sie als Vorschlag.
 

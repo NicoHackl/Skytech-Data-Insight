@@ -1,6 +1,6 @@
 # Sicherheit und Datenschutz
 
-## Zugänge (Stand 0.3.0)
+## Zugänge (Stand 0.5.0)
 
 | Zugang | Schutz |
 |---|---|
@@ -12,6 +12,7 @@
 | MCP-Server (8765) | nur mit `mcp_token` (Bearer, Vergleich in konstanter Zeit); ohne Token aus. **Vollzugriff** auf Daten und Dashboards, deshalb Sicherung vor jeder Änderung und Protokoll, [mcp.md](mcp.md) |
 | Grafana-Datenquelle | interne Rolle `skytech_grafana` (nur lesen, nur 127.0.0.1), Passwort erzeugt in `/data/secrets` |
 | Home Assistant | WebSocket-API über den Supervisor mit dessen Token; das Add-on liest nur (Zustände, Verlauf) und schreibt nichts nach HA |
+| Supervisor | Rolle `manager` (D-025), genutzt ausschließlich für `/addons/self/info`, `/addons/self/options` (prüfen, speichern) und `/network/info` – für die Seite „Zugänge“ |
 
 Proxy-Benutzer bekommen in Grafana die Rolle `Admin`, weil nur HA-Administratoren das
 Ingress-Panel sehen.
@@ -29,7 +30,13 @@ Ingress-Panel sehen.
   heruntergeladene Pakete entsprechend aufbewahren.
 - Beim Einspielen werden nur die bekannten Einträge eines Pakets als Dateien gelesen – Pfade im
   Archiv werden nie ausgepackt.
-- Das Änderungsprotokoll speichert den HA-Benutzernamen zu jeder Änderung an der Sensorliste.
+- Das Änderungsprotokoll speichert den HA-Benutzernamen zu jeder Änderung über die Oberfläche.
+- **Seite „Zugänge“ (D-025):** Neue Passwörter und Token erzeugt der Server; sie stehen genau
+  einmal in der HTTP-Antwort (`Cache-Control: no-store`) und danach nur noch in den
+  Add-on-Optionen. Gespeicherte Werte gibt die API nie aus, nur „gesetzt/gesperrt“. Nach der
+  Speicherung gelangen sie über die Umgebung (`psql`) bzw. die Standardeingabe
+  (`grafana cli`) an ihr Ziel; deren Ausgabe wird verworfen, weil sie die Anweisung samt Passwort
+  wiederholen könnte. Das Protokoll vermerkt nur Zugang und Benutzer.
 
 ## Externe Dienste
 

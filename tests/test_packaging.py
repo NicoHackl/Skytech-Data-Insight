@@ -78,3 +78,13 @@ def test_ingress_server_is_locked_to_supervisor():
     # Der LAN-Server darf den Anmelde-Header nie durchreichen.
     lan = nginx.split("listen 3000;", 1)[1]
     assert 'proxy_set_header X-WEBAUTH-USER "";' in lan
+
+
+def test_access_page_requirements():
+    """Seite „Zugänge“ (D-025): Rolle für das Schreiben der eigenen Optionen,
+    SQL-Datei für Passwörter, lokale Sicherungen vor Änderungen nicht im HA-Backup."""
+    manifest = _manifest()
+    assert manifest["hassio_role"] == "manager"
+    assert "backup/vor_aenderung_*" in manifest["backup_exclude"]
+    sql = (ROOT / "rootfs/usr/share/skytech/set_password.sql").read_text(encoding="utf-8")
+    assert "\\getenv password SKYTECH_PASSWORD" in sql and "%L" in sql

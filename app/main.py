@@ -17,6 +17,7 @@ import aiohttp
 import asyncpg
 from aiohttp import web
 
+import access_service
 import backup
 import database
 import health
@@ -27,6 +28,7 @@ from collector import Collector
 from display_time import BERLIN, format_berlin
 from ha_client import HAClient, connection_settings
 from suggestions import suggest
+from supervisor_client import SupervisorClient, SupervisorPermissionDenied, SupervisorRejected, SupervisorUnavailable
 from values import is_numeric_attribute
 
 _STATIC_DIR = Path(__file__).parent / "static"
@@ -76,6 +78,7 @@ class AdminService:
         self.startup_error: str | None = None
         self._tasks: list[asyncio.Task] = []
         self.restorer = backup.Restorer()
+        self.supervisor: SupervisorClient | None = None
 
     # ------------------------------------------------------------------
     # Lebenszyklus
@@ -83,6 +86,7 @@ class AdminService:
 
     async def _on_startup(self, _app: web.Application) -> None:
         self._session = aiohttp.ClientSession()
+        self.supervisor = SupervisorClient(self._session)
         if self._start_backend:
             self._tasks.append(asyncio.create_task(self._start_backend_services(), name="backend-start"))
 
@@ -387,6 +391,48 @@ class AdminService:
         return json_response({"version": migration.version, "datei": migration.path.name, "sql": migration.sql})
 
     # ------------------------------------------------------------------
+    # Zugänge (M3, D-025)
+    # ------------------------------------------------------------------
+
+    async def handle_access(self, _request: web.Request) -> web.Response:
+        assert self.supervisor is not None
+        try:
+            return json_response(await access_service.overview(self.supervisor))
+        except (SupervisorUnavailable, SupervisorRejected) as exc:
+            return error_response(str(exc), 503)
+
+    async def handle_access_change(self, request: web.Request) -> web.Response:
+        key = request.match_info["key"]
+        action = request.match_info["action"]
+        if key not in access_service.BY_KEY:
+            return error_response("Unbekannter Zugang.", 404)
+        body = await self._json_body(request)
+        if not isinstance(body, dict) or body.get("bestaetigung") != key:
+            return error_response("Bestätigung fehlt.", 400)
+        assert self.supervisor is not None
+        if not self.supervisor.available:
+            return error_response("Nur im Add-on unter Home Assistant möglich.", 503)
+        secret = access_service.new_secret() if action == "neu" else ""
+        log_action = "zugang_neu" if secret else "zugang_gesperrt"
+        warning = None
+        try:
+            await access_service.change(self.supervisor, key, secret)
+        except SupervisorPermissionDenied as exc:
+            return error_response(str(exc), 403)
+        except (SupervisorUnavailable, SupervisorRejected) as exc:
+            # Nichts gespeichert – der alte Stand gilt weiter.
+            return error_response(str(exc), 502)
+        except access_service.AccessError as exc:
+            # Gespeichert, nur nicht sofort angewendet: das Secret muss trotzdem
+            # angezeigt werden, sonst wäre der Zugang nach dem Neustart verloren.
+            warning = str(exc)
+        await self._log(request, log_action, {"zugang": key, **({"warnung": warning} if warning else {})})
+        # Das Secret steht nur in dieser einen Antwort – nie zwischenspeichern.
+        response = json_response({"zugang": key, "secret": secret or None, "warnung": warning})
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # ------------------------------------------------------------------
     # Sicherungen (M2)
     # ------------------------------------------------------------------
 
@@ -525,6 +571,8 @@ class AdminService:
         app.router.add_get("/api/log", self.handle_log)
         app.router.add_get("/api/migrations", self.handle_migrations)
         app.router.add_get(r"/api/migrations/{version:\d+}", self.handle_migration_sql)
+        app.router.add_get("/api/access", self.handle_access)
+        app.router.add_post(r"/api/access/{key:[a-z_]+}/{action:neu|sperren}", self.handle_access_change)
         app.router.add_get("/api/backups", self.handle_backups)
         app.router.add_post("/api/backups", self.handle_create_backup)
         app.router.add_get("/api/backups/download", self.handle_download_archive)

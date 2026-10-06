@@ -1,5 +1,5 @@
 name: "Skytech Data Insight"
-version: "0.4.3"
+version: "0.5.0"
 slug: "skytech_data_insight"
 description: >-
   Langzeitablage und Auswertung von Energiedaten für Home Assistant:
@@ -41,6 +41,9 @@ backup_exclude:
   - "backup/ha_wiederhergestellt_*"
   - "backup/download_*"
 hassio_api: true
+# Die Seite „Zugänge“ schreibt Passwörter und MCP-Token in die eigenen
+# Optionen; das erlaubt der Supervisor erst ab dieser Rolle (D-025).
+hassio_role: manager
 watchdog: "tcp://[HOST]:[PORT:8099]"
 # LAN-Zugänge. Freigeben, umlegen oder abschalten über den Abschnitt
 # „Netzwerk" der Add-on-Seite (D-009).

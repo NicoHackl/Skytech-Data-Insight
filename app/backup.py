@@ -82,13 +82,13 @@ def _stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
 
 
-def _as_postgres(command: list[str]) -> list[str]:
+def as_postgres(command: list[str]) -> list[str]:
     return ["s6-setuidgid", "postgres", *command] if os.geteuid() == 0 else command
 
 
 def dump_command(target: Path) -> list[str]:
     """pg_dump als Betriebssystem-Benutzer postgres über den lokalen Socket."""
-    return _as_postgres(["pg_dump", "--format=custom", "--no-password", f"--file={target}",
+    return as_postgres(["pg_dump", "--format=custom", "--no-password", f"--file={target}",
                          "--host=/run/postgresql", "--username=postgres", "skytech"])
 
 
@@ -194,7 +194,7 @@ async def build_archive(version: str, directory: Path = BACKUP_DIR, grafana_db: 
 
 
 async def validate_dump(path: Path) -> None:
-    code, output = await _run(_as_postgres(["pg_restore", "--list", str(path)]), 300)
+    code, output = await _run(as_postgres(["pg_restore", "--list", str(path)]), 300)
     if code != 0:
         raise BackupError(f"Keine gültige Datenbanksicherung: {_last_line(output)}")
 

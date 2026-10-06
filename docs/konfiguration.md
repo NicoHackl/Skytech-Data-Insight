@@ -4,15 +4,19 @@
 
 Gepflegt auf der Add-on-Seite in Home Assistant (Reiter „Konfiguration"). Fachliche Einstellungen
 stehen nicht hier, sondern in der Datenbank: Sensorauswahl in `skytech.sensor` (Seite „Sensoren"),
-Aufbewahrung in `skytech_config.einstellung` (siehe [datenmodell.md](datenmodell.md)).
+Aufbewahrung in `skytech_config.einstellung` (Seite „Speicher“, siehe [datenmodell.md](datenmodell.md)).
+
+Passwörter und MCP-Token lassen sich zusätzlich auf der Seite **„Zugänge“** neu erzeugen oder
+sperren. Die Seite schreibt dieselben Optionen über die Supervisor-API und wendet sie ohne
+Neustart an (D-025); auf der Konfigurationsseite erscheint danach derselbe Wert.
 
 | Option | Typ | Voreinstellung | Wirkung |
 |---|---|---|---|
 | `log_level` | `debug` \| `info` \| `warning` \| `error` | `info` | Protokollstufe von Init-Skripten und Verwaltungsdienst. Grafana protokolliert erst ab `debug` ausführlich, sonst nur Warnungen |
 | `grafana_admin_password` | Passwort, optional | leer | Passwort des Grafana-Benutzers `admin` für die Anmeldung im LAN. Leer = bei jedem Start ein Zufallspasswort, LAN-Anmeldung damit gesperrt (D-011). Wird bei jedem Start gesetzt – eine Änderung wirkt nach dem Neustart des Add-ons |
-| `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart |
-| `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart |
-| `mcp_token` | Passwort, optional | leer | Token des MCP-Servers (mindestens 16 Zeichen). Leer = MCP-Server aus. [mcp.md](mcp.md) |
+| `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
+| `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
+| `mcp_token` | Passwort, optional | leer | Token des MCP-Servers (mindestens 16 Zeichen). Leer = MCP-Server aus. Über „Zugänge“ neu erzeugt, startet nur der MCP-Server neu. [mcp.md](mcp.md) |
 
 ## Ports
 

@@ -63,12 +63,14 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 | `mcp_server.py`, `mcp_tools.py` | eigener Prozess: MCP-Protokoll und Token-Prüfung bzw. Fachlogik der Werkzeuge | – |
 | `backup.py` | Sicherungen, Download-Paket, Prüfung hochgeladener Dateien, Wiederherstellung als Hintergrundauftrag ([backup-restore.md](backup-restore.md)) | – |
 | `grafana_client.py` | Grafana-HTTP-API über den Auth-Proxy | – |
+| `settings_service.py` | Aufbewahrung lesen, prüfen, anwenden; Speicherbelegung – für Oberfläche und MCP | sichern oder protokollieren (macht der Aufrufer) |
+| `supervisor_client.py`, `access_service.py` | eigene Add-on-Optionen über die Supervisor-API; Zugänge anzeigen, Secrets neu erzeugen und ohne Neustart anwenden (D-025) | Secrets loggen oder in Kommandozeilen schreiben |
 
 ### Ablauf der Aufzeichnung
 
 1. Beim Start: Migrationen, `aufbewahrung_anwenden()`, Sensorliste und letzter Wert je Sensor laden.
 2. Nach jeder (Neu-)Verbindung zu HA: Zustandsabbild holen, `state_changed` abonnieren, die Lücke
-   seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen (höchstens 10 Tage), dann den
+   seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen (höchstens 10 Tage, begrenzt durch die Aufbewahrung des HA-Recorders), dann den
    aktuellen Zustand übernehmen.
 3. Je Zustandswechsel: Wert je betroffenem Sensor umsetzen, nur bei Änderung puffern.
 4. Alle 2 s (und vor jeder Minutenberechnung): Puffer gebündelt schreiben – gesperrt, der Puffer wird dabei ausgetauscht. Datenbank weg → Werte kommen zurück in den Puffer (höchstens 100 000).
