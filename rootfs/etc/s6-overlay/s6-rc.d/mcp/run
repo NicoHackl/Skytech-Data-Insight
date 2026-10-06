@@ -8,7 +8,11 @@ if skytech::has_supervisor; then
     # /data/options.json schreibt der Supervisor erst beim Start des Add-ons neu.
     # Nach „Neu erzeugen“ auf der Seite „Zugänge“ startet nur dieser Dienst neu –
     # deshalb gilt der Wert aus der Supervisor-API, die Datei nur als Rückfall (D-025).
-    token=$(bashio::config 'mcp_token' "${token}")
+    # Ist die API kurz nicht erreichbar, gilt der Wert aus der Datei – der Dienst
+    # darf daran nicht scheitern (bashio läuft mit errexit).
+    if live_token=$(bashio::config 'mcp_token' "${token}" 2>/dev/null); then
+        token="${live_token}"
+    fi
 fi
 if [[ ${#token} -lt 16 ]]; then
     if [[ -n "${token}" ]]; then
