@@ -20,6 +20,9 @@ Ingress-Panel sehen.
 > **Wichtig:** Port 3000, 5432 und 8765 nie per Portfreigabe ins Internet öffnen.
 > Fernzugriff nur über VPN.
 
+Mit `grafana_tls` liegt Port 3000 hinter TLS (nur TLS 1.2/1.3). Das Add-on liest das Zertifikat
+nur lesend aus `/ssl`; der private Schlüssel verlässt den Container nicht (D-026).
+
 ## Secrets
 
 - Keine Secrets in Vorlagen, erzeugten Konfigurationsdateien, Logs oder im Repo.

@@ -14,9 +14,19 @@ Neustart an (D-025); auf der Konfigurationsseite erscheint danach derselbe Wert.
 |---|---|---|---|
 | `log_level` | `debug` \| `info` \| `warning` \| `error` | `info` | Protokollstufe von Init-Skripten und Verwaltungsdienst. Grafana protokolliert erst ab `debug` ausführlich, sonst nur Warnungen |
 | `grafana_admin_password` | Passwort, optional | leer | Passwort des Grafana-Benutzers `admin` für die Anmeldung im LAN. Leer = bei jedem Start ein Zufallspasswort, LAN-Anmeldung damit gesperrt (D-011). Wird bei jedem Start gesetzt – eine Änderung wirkt nach dem Neustart des Add-ons |
+| `grafana_tls` | Schalter | aus | Port 3000 per https mit dem HA-Zertifikat aus `/ssl` ausliefern (D-026). Nötig für die Einbettung in eine HA-Karte „Website“ bei https-HA. Fehlen die Dateien, bleibt Port 3000 http (Warnung im Protokoll). Wirkt nach Neustart |
+| `grafana_tls_certfile` | Text | `fullchain.pem` | Zertifikatskette im HA-Ordner `ssl` (nur Dateiname) |
+| `grafana_tls_keyfile` | Text | `privkey.pem` | Privater Schlüssel im HA-Ordner `ssl` (nur Dateiname) |
 | `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
 | `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
 | `mcp_token` | Passwort, optional | leer | Token des MCP-Servers (mindestens 16 Zeichen). Leer = MCP-Server aus. Über „Zugänge“ neu erzeugt, startet nur der MCP-Server neu. [mcp.md](mcp.md) |
+
+## Grafana in HA einbetten (https)
+
+Läuft HA über https, blockt der Browser http-iframes. Dann `grafana_tls` einschalten und in der
+Karte „Website“ die Adresse mit der **Domain des Zertifikats** verwenden (nicht die IP):
+`https://<domain>:3000/<ingress_entry>/grafana/d/<uid>?kiosk`. Im iframe ist die Grafana-Anmeldung
+(`admin` + `grafana_admin_password`) nötig.
 
 ## Ports
 

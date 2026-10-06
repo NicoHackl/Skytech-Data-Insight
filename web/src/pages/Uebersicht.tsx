@@ -120,7 +120,9 @@ export function Uebersicht() {
                 <div className="hint-box">
                   Über das Home-Assistant-Seitenmenü sind Sie in Grafana automatisch angemeldet.
                   Im LAN ist Grafana zusätzlich unter Port 3000 erreichbar – dort mit dem
-                  Grafana-Benutzer „admin" und dem Passwort von der Seite „Zugänge".
+                  Grafana-Benutzer „admin" und dem Passwort von der Seite „Zugänge". Für die
+                  Einbettung in eine HA-Karte „Website“ bei https-HA die Add-on-Option „Grafana per https“
+                  einschalten und die Domain des Zertifikats verwenden.
                 </div>
               </div>
             </div>

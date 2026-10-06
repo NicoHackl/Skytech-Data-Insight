@@ -8,6 +8,19 @@ configuration:
       Passwort des Grafana-Benutzers „admin" für die Anmeldung im LAN (Port 3000).
       Leer lassen, wenn Grafana nur über das HA-Seitenmenü genutzt wird – dann ist
       die LAN-Anmeldung gesperrt.
+  grafana_tls:
+    name: Grafana per https (Port 3000)
+    description: >-
+      Liefert Port 3000 verschlüsselt mit dem Zertifikat aus dem HA-Ordner „ssl“ aus.
+      Nötig, um Grafana in einer HA-Karte „Website“ einzubinden, wenn HA über https
+      läuft. Die Adresse muss die Domain des Zertifikats enthalten, nicht die IP.
+      Fehlen die Dateien, bleibt Port 3000 unverschlüsselt.
+  grafana_tls_certfile:
+    name: Zertifikatsdatei für Grafana
+    description: Name der Zertifikatsdatei (Kette) im HA-Ordner „ssl“, z. B. fullchain.pem.
+  grafana_tls_keyfile:
+    name: Schlüsseldatei für Grafana
+    description: Name der privaten Schlüsseldatei im HA-Ordner „ssl“, z. B. privkey.pem.
   db_password:
     name: Datenbank-Passwort (Vollzugriff)
     description: >-

@@ -8,10 +8,19 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt — 06.10.2026
+
+- **Grafana per https im LAN** (D-026): neue Optionen `grafana_tls`, `grafana_tls_certfile`,
+  `grafana_tls_keyfile`. Ist die Option an, liefert Port 3000 mit dem HA-Zertifikat aus dem Ordner
+  `ssl` aus. So lässt sich Grafana in einer HA-Karte „Website“ einbinden, wenn HA über https läuft
+  (Meldung „Iframes, die auf Websites mit http: zeigen, können nicht geladen werden“). Fehlen die
+  Dateien, bleibt Port 3000 unverschlüsselt und das Protokoll warnt.
+
 ### Dokumentation — 06.10.2026
 
 - Gemeinsame Contract-Ablage mit einem Ordner je Projektpaar und aktualisierten Verweisen.
 - Ablagekonvention vorbereitet; kein neuer bilateraler Laufzeitvertrag eingeführt.
+- Regel zur Pflege projektübergreifender Verträge in `AGENTS.md` verankert, damit KI-Assistenten sie automatisch beachten.
 
 
 ### Hinzugefügt (Meilenstein M3, Version 0.5.0)
