@@ -41,9 +41,6 @@ backup_exclude:
   - "backup/ha_wiederhergestellt_*"
   - "backup/download_*"
 hassio_api: true
-# HA-Zertifikate (nur lesen) für Grafana per https im LAN (D-026).
-map:
-  - ssl:ro
 # Die Seite „Zugänge“ schreibt Passwörter und MCP-Token in die eigenen
 # Optionen; das erlaubt der Supervisor erst ab dieser Rolle (D-025).
 hassio_role: manager
@@ -61,18 +58,12 @@ ports_description:
 options:
   log_level: info
   grafana_admin_password: ""
-  grafana_tls: false
-  grafana_tls_certfile: "fullchain.pem"
-  grafana_tls_keyfile: "privkey.pem"
   db_password: ""
   db_readonly_password: ""
   mcp_token: ""
 schema:
   log_level: list(debug|info|warning|error)
   grafana_admin_password: password?
-  grafana_tls: bool
-  grafana_tls_certfile: str
-  grafana_tls_keyfile: str
   db_password: password?
   db_readonly_password: password?
   mcp_token: password?

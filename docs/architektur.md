@@ -30,7 +30,7 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
   HA Core ──WebSocket (über Supervisor)──► app: Collector ──socket──► postgres
   HA-Supervisor ──Ingress──► nginx :8099 ──/──────────► app: API + SPA (127.0.0.1:8100)
   (172.30.32.2)                          └─/grafana/──► grafana 127.0.0.1:3001 ◄──┐
-  LAN ─────────────────────► nginx :3000 (optional https, D-026) ──<ingress_entry>/grafana/ ───────────────┘
+  LAN ─────────────────────► nginx :3000 ──<ingress_entry>/grafana/ ───────────────┘
   LAN (VSCode) ────────────► postgres :5432 (skytech_admin / skytech_reader, Passwort)
   LAN (LLM) ───────────────► mcp :8765/mcp (Bearer-Token) ──socket──► postgres, ──auth-proxy──► grafana
 ```

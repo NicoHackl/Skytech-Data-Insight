@@ -8,19 +8,6 @@ configuration:
       Password of the Grafana user "admin" for LAN login (port 3000). Leave empty
       if Grafana is only used through the Home Assistant sidebar – LAN login is
       then locked.
-  grafana_tls:
-    name: Grafana over https (port 3000)
-    description: >-
-      Serves port 3000 encrypted with the certificate from the HA "ssl" folder.
-      Needed to embed Grafana in a "Website" card when HA runs over https. Use the
-      certificate's domain in the address, not the IP. If the files are missing,
-      port 3000 stays unencrypted.
-  grafana_tls_certfile:
-    name: Certificate file for Grafana
-    description: Name of the certificate (chain) file in the HA "ssl" folder, e.g. fullchain.pem.
-  grafana_tls_keyfile:
-    name: Key file for Grafana
-    description: Name of the private key file in the HA "ssl" folder, e.g. privkey.pem.
   db_password:
     name: Database password (full access)
     description: >-
