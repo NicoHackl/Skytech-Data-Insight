@@ -77,6 +77,13 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
     invertierter Notbehelf. Die Wahl bleibt über Neuladen hinweg erhalten, die Voreinstellung
     kommt vom Betriebssystem.
 
+12. **Projektübergreifende Verträge:** Die gemeinsame Ablagestruktur steht in
+   [`contract/`](contract/README.md). Für dieses Projekt gibt es derzeit **keinen** bilateralen
+   Vertrag; die HTTP-/MCP- und Datenbankschnittstellen stehen in
+   [docs/api-referenz.md](docs/api-referenz.md) und [docs/datenmodell.md](docs/datenmodell.md).
+   Entsteht ein Vertrag mit einem anderen Skytech-Projekt, gilt `contract/README.md`: beide
+   Kopien wortgleich im selben Arbeitspaket nachziehen.
+
 ## Befehle
 
 | Zweck | Befehl |
@@ -98,6 +105,7 @@ passende Datei lesen, statt zu raten:
 | Datei | Inhalt |
 |---|---|
 | [docs/README.md](docs/README.md) | Einstieg und Index der gesamten Doku |
+| [contract/README.md](contract/README.md) | Projektübergreifende Verträge: Struktur, Regeln, Index der Gegenstellen |
 | [docs/architektur.md](docs/architektur.md) | Komponenten, Datenfluss, Grenzen, Tech-Stack |
 | [docs/entwicklerrichtlinien.md](docs/entwicklerrichtlinien.md) | Naming, Struktur, Fehlerbehandlung, Kommentarstil |
 | [docs/frontend.md](docs/frontend.md) | Frontend-Stack, Ordnerstruktur, Routing, API-Client, Seiten- und Formularmuster |
@@ -120,6 +128,7 @@ passende Datei lesen, statt zu raten:
    Doku beschriebene Funktion sei tatsächlich implementiert.
 3. Implementieren, Tests und Linting laufen lassen.
 4. Changelog- und Doku-Einträge im selben Arbeitspaket nachziehen.
+   Betrifft die Änderung eine Gegenstelle: Vertrag unter `contract/` in beiden Repos nachziehen (Regel 12).
 5. Committen und pushen auf `agent/main`.
 6. Neue Grundsatzentscheidung? → Eintrag in
    [docs/design-entscheidungen.md](docs/design-entscheidungen.md), ausführlich als ADR unter
