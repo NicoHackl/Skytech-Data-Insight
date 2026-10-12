@@ -150,6 +150,13 @@ und optional VSCode), `skytech_collector` (nur INSERT auf `messwert`), später `
 - **Weg B – direktes Schreiben:** HEMS schreibt mit eigener Rolle `skytech_hems` in `messwert`
   (Verbindungsdaten per Add-on-Option im HEMS). Hohe Auflösung auch ohne HA-State-Änderung.
 - Welcher Weg genutzt wird, entscheidet die spätere HEMS-Erweiterung; Data Insight unterstützt beide.
+- **Entschieden am 12.10.2026 (SkytechHEMS D-065): Weg B**, erweitert für den dynamischen
+  Strompreis. Das HEMS legt die benötigten HA-Sensoren hier an oder übernimmt vorhandene; der
+  Collector zeichnet sie auf. Sie gelten dann als „über Vertrag verwaltet“ und sind in
+  Oberfläche, MCP und SQL gesperrt; ändern lassen sie sich nur über das HEMS, das sie über eine
+  Rollen-Zuordnung austauschen kann, ohne dass die Historie abreißt. Dazu kommen Tabellen für
+  Prognose- und Preisläufe und eigene `hems.*`-Messreihen. Schnittstelle als Vertrag
+  `contract/contract_hems_data_insight/` (Entwurf folgt), dann Umsetzung hier.
 
 ## Migrationen
 

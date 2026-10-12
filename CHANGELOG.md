@@ -8,6 +8,13 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 12.10.2026 (dynamischer Strompreis)
+
+- HEMS-Anbindung (M7) festgelegt: Weg B mit eigener Rolle `skytech_hems` für den dynamischen
+  Strompreis (SkytechHEMS D-065). Vom HEMS verwaltete Sensoren werden hier gekennzeichnet und
+  gesperrt; Prognose- und Preistabellen kommen dazu. Vertrag und Umsetzung folgen. Kein Code
+  geändert.
+
 ### Dokumentation — 07.10.2026
 
 - Grafana in einer HA-Karte „Webseite“ einbinden: relativer Ingress-Pfad statt `http://<ip>:3000`
