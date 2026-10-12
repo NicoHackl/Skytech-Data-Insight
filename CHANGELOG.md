@@ -8,6 +8,14 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 12.10.2026 (Vertrag mit SkytechHEMS)
+
+- **Vertrag `contract_hems_data_insight` 0.1 (Entwurf)** wortgleich mit SkytechHEMS und neue
+  Grundsatzentscheidung D-027 (Status Geplant): eigene Rolle `skytech_hems`, vom HEMS verwaltete und
+  hier gesperrte Sensoren, Rollen-Zuordnung, Prognose- und Preistabellen. Noch nicht
+  implementiert. `AGENTS.md` (Regel 12), `contract/README.md`, `datenmodell.md`, `roadmap.md` und
+  `umsetzungsplan.md` verweisen darauf.
+
 ### Dokumentation — 12.10.2026 (dynamischer Strompreis)
 
 - HEMS-Anbindung (M7) festgelegt: Weg B mit eigener Rolle `skytech_hems` für den dynamischen

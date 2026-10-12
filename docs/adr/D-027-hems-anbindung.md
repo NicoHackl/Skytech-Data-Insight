@@ -1,0 +1,62 @@
+# D-027: SkytechHEMS schreibt über eine eigene Rolle und verwaltet seine Sensoren selbst
+
+- **Datum:** 12.10.2026
+- **Status:** Geplant
+- **Betrifft:** künftig `app/sql/` (Migration), `rootfs/usr/share/skytech/` (Rolle, `pg_hba`),
+  `config.yaml` (Option `hems_password`), `app/access_service.py` (Zugang `hems`),
+  `app/sensor_service.py`, `app/mcp_tools.py`, Seiten „Sensoren“ und „Zugänge“; Schnittstelle:
+  [Vertrag mit SkytechHEMS](../../contract/contract_hems_data_insight/contract_hems_data_insight.md)
+
+## Kontext
+
+Der Umsetzungsplan sah für M7 zwei Wege vor: Weg A (HEMS veröffentlicht einen Attribut-Sensor) und
+Weg B (HEMS schreibt mit eigener Rolle `skytech_hems`). Für den dynamischen Strompreis (SkytechHEMS
+D-065) braucht das HEMS mehr als Messwerte: Prognosekurven mit zwei Zeitachsen (erstellt / gültig
+für), die Historie der Grundlast und eine verlässliche Zuordnung, welcher Sensor welche fachliche
+Rolle hat, auch nach einem Wechsel von Home Assistant. Der User hat am 12.10.2026 festgelegt, dass
+das HEMS die benötigten Sensoren hier selbst anlegt oder vorhandene übernimmt, und dass sie danach
+nur noch über das HEMS verwaltet werden.
+
+## Betrachtete Optionen
+
+### Option A — Attribut-Sensor in Home Assistant (Weg A)
+
+- Dafür: kein neuer Zugang zur Datenbank.
+- Dagegen: Prognosekurven passen nicht in `messwert`; jede Kurve stünde zusätzlich im
+  HA-Recorder. Sensoren und Rollen müssten von Hand gepflegt werden.
+
+### Option B — Eigene Rolle mit eng begrenzten Rechten (Weg B, gewählt)
+
+- Dafür: Prognose- und Preisläufe in eigenen Tabellen; das HEMS legt Sensoren selbst an und kann
+  sie austauschen; Rechte, Row-Level-Security und ein Sperr-Trigger begrenzen, was es darf.
+- Dagegen: neue Anmelderolle, neuer Zugang, mehr Schema.
+
+## Entscheidung
+
+Option B, ausgestaltet im
+[Vertrag mit SkytechHEMS](../../contract/contract_hems_data_insight/contract_hems_data_insight.md)
+(Version 0.1, Entwurf). Kernpunkte:
+
+- Rolle `skytech_hems`, nur im internen Add-on-Netz, Secret über die Seite „Zugänge“
+  (Schlüssel `hems`, Option `hems_password`).
+- Spalte `sensor.verwaltet_von`. Vom HEMS angelegte oder übernommene Sensoren sind per Trigger
+  gegen Änderungen anderer Rollen gesperrt und in Oberfläche, API (`409`) und MCP gekennzeichnet.
+- `hems_zuordnung` (Rolle → Sensor mit Gültigkeitsbeginn) und Sichten je Rolle, damit ein
+  Sensortausch die Historie nicht unterbricht.
+- `prognose_lauf` und `prognose_wert` samt Sichten für Prognose gegen Ist und Prognosegüte.
+- Data Insight rechnet keine Prognosen.
+
+## Folgen
+
+- **Positiv:** Prognosen, Preise und Ist-Werte liegen an einer Stelle; Grafana und MCP sehen sie
+  ohne Umweg.
+- **Negativ:** Ein Teil der Sensorliste ist hier nicht mehr frei bearbeitbar. Das ist gewollt, weil
+  das HEMS sonst mit Sensoren rechnet, die jemand anders geändert hat.
+- **Aufwand:** Migration, Rolle und `pg_hba`, Zugang `hems`, Sperre in Oberfläche, API und MCP,
+  Tests gegen den TimescaleDB-Testcontainer.
+
+## Rücknahmebedingung
+
+Stellt sich heraus, dass die Sperre im Alltag stört, etwa weil verwaltete Sensoren regelmäßig
+von Hand korrigiert werden müssen, wird die Verwaltung gelockert. Das geschieht über eine neue
+Vertragsversion, nicht durch Umgehen des Triggers.

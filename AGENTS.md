@@ -78,11 +78,14 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
     kommt vom Betriebssystem.
 
 12. **Projektübergreifende Verträge:** Die gemeinsame Ablagestruktur steht in
-   [`contract/`](contract/README.md). Für dieses Projekt gibt es derzeit **keinen** bilateralen
-   Vertrag; die HTTP-/MCP- und Datenbankschnittstellen stehen in
-   [docs/api-referenz.md](docs/api-referenz.md) und [docs/datenmodell.md](docs/datenmodell.md).
-   Entsteht ein Vertrag mit einem anderen Skytech-Projekt, gilt `contract/README.md`: beide
-   Kopien wortgleich im selben Arbeitspaket nachziehen.
+   [`contract/`](contract/README.md). Mit **SkytechHEMS** besteht der Vertrag
+   [`contract_hems_data_insight`](contract/contract_hems_data_insight/contract_hems_data_insight.md)
+   (Entwurf 0.1, D-027). Wer Rolle `skytech_hems`, verwaltete Sensoren, Rollen-Zuordnung oder
+   Prognosetabellen ändert, liest zuerst `contract/README.md` und den Vertrag und zieht **beide
+   Kopien** (dieses Repo und SkytechHEMS, gleicher relativer Pfad, wortgleich) im **selben
+   Arbeitspaket** nach, samt Changelog-Eintrag in beiden Repos. Die übrigen HTTP-/MCP- und
+   Datenbankschnittstellen stehen in [docs/api-referenz.md](docs/api-referenz.md) und
+   [docs/datenmodell.md](docs/datenmodell.md). Ist die Gegenstelle unklar: fragen, nicht raten.
 
 ## Befehle
 

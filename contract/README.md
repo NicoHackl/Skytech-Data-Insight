@@ -19,7 +19,9 @@ und Entwürfe. Ein Plan oder eine Dokumentationsänderung allein implementiert k
 Schnittstelle. Lokale Dokumentation verlinkt den Vertrag, statt eine abweichende
 Beschreibung der gemeinsamen Felder zu führen.
 
-Für Skytech Data Insight ist in diesem Arbeitspaket kein eigener bilateraler
-Vertrag vereinbart. Das Verzeichnis legt die gemeinsame Ablagestruktur fest. Die
-vorhandenen HTTP-/MCP- und Datenbankschnittstellen bleiben in
+| Gegenstelle | Vertrag | Stand / Hinweise |
+|---|---|---|
+| SkytechHEMS | [contract_hems_data_insight.md](contract_hems_data_insight/contract_hems_data_insight.md) | Version 0.1, Entwurf: Rolle `skytech_hems`, vom HEMS verwaltete Sensoren, Rollen-Zuordnung, Prognose- und Preisläufe (D-027). Noch nicht implementiert. |
+
+Die übrigen HTTP-/MCP- und Datenbankschnittstellen sind kein bilateraler Vertrag und bleiben in
 [API-Referenz](../docs/api-referenz.md) und [Datenmodell](../docs/datenmodell.md) beschrieben.

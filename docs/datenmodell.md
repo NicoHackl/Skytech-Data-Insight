@@ -41,7 +41,7 @@ skytech.messwert  ──(minute_values.py)──►  skytech.messwert_1min
 | `einheit`, `anlage` | frei; `anlage` fasst Sensoren einer Anlage zusammen |
 | `energie_zaehler` | Zählerstand (HA `state_class` total/total_increasing): Minutenwerte tragen den Zuwachs |
 | `aktiv` | aus = keine neuen Werte, vorhandene bleiben |
-| `quelle` | `ha` (heute), `hems`/`extern` vorbereitet für M7 |
+| `quelle` | `ha` (heute), `hems` für Messreihen, die SkytechHEMS selbst schreibt (Vertrag, Entwurf), `extern` vorbereitet |
 
 Eindeutig: je Entität der Zustand und jedes Attribut höchstens einmal. Jede Änderung an der
 Tabelle meldet sich per `NOTIFY skytech_sensor` beim Collector – auch Änderungen per SQL wirken
@@ -114,6 +114,15 @@ WHERE kategorie = 'pv' AND groesse = 'energie'
   AND zeit >= '2026-09-01 00:00 Europe/Berlin'
 ORDER BY tag;
 ```
+
+## Geplant: Anbindung von SkytechHEMS (Vertrag, Entwurf)
+
+Für den dynamischen Strompreis kommen eine Rolle `skytech_hems`, die Spalte
+`sensor.verwaltet_von` (vom HEMS verwaltete, gesperrte Sensoren), die Tabelle `hems_zuordnung`
+(Rolle → Sensor), die Tabellen `prognose_lauf`/`prognose_wert` und zugehörige Sichten dazu.
+Noch nicht gebaut. Maßgeblich für Namen, Spalten und Rechte ist der
+[Vertrag mit SkytechHEMS](../contract/contract_hems_data_insight/contract_hems_data_insight.md)
+(D-027); diese Datei beschreibt sie erst, wenn sie umgesetzt sind.
 
 ## Konfiguration und Protokoll (Schema `skytech_config`)
 

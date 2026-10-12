@@ -155,8 +155,9 @@ und optional VSCode), `skytech_collector` (nur INSERT auf `messwert`), später `
   Collector zeichnet sie auf. Sie gelten dann als „über Vertrag verwaltet“ und sind in
   Oberfläche, MCP und SQL gesperrt; ändern lassen sie sich nur über das HEMS, das sie über eine
   Rollen-Zuordnung austauschen kann, ohne dass die Historie abreißt. Dazu kommen Tabellen für
-  Prognose- und Preisläufe und eigene `hems.*`-Messreihen. Schnittstelle als Vertrag
-  `contract/contract_hems_data_insight/` (Entwurf folgt), dann Umsetzung hier.
+  Prognose- und Preisläufe und eigene `hems.*`-Messreihen. Schnittstelle:
+  [Vertrag mit SkytechHEMS](../contract/contract_hems_data_insight/contract_hems_data_insight.md)
+  (Entwurf 0.1, D-027); Umsetzung hier als nächster Schritt.
 
 ## Migrationen
 
