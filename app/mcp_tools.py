@@ -236,6 +236,8 @@ class McpTools:
                 raise ToolError(f"{exc} {exc.field_errors}") from exc
             except sensor_service.NotFoundError as exc:
                 raise ToolError(f"Sensor {sensor_id} nicht gefunden.") from exc
+            except sensor_service.LockedError as exc:
+                raise ToolError(str(exc)) from exc
         return {"ok": True, "sicherung": backup_name}
 
     async def set_retention(self, raw_days: int | None, minute_days: int | None) -> dict[str, Any]:

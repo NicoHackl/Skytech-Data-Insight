@@ -12,6 +12,7 @@ const SOURCES: Record<LogSource, { label: string; pill: string }> = {
   ui: { label: 'Oberfläche', pill: 'primary' },
   mcp: { label: 'MCP', pill: 'warn' },
   system: { label: 'System', pill: 'muted' },
+  hems: { label: 'Skytech HEMS', pill: 'ok' },
 }
 
 const ACTIONS: Record<string, string> = {
@@ -29,6 +30,11 @@ const ACTIONS: Record<string, string> = {
   dashboard_geloescht: 'Dashboard gelöscht',
   zugang_neu: 'Zugangsdaten neu erzeugt',
   zugang_gesperrt: 'Zugang gesperrt',
+  hems_sensor_angelegt: 'HEMS: Sensor angelegt',
+  hems_sensor_uebernommen: 'HEMS: Sensor übernommen',
+  hems_sensor_aktualisiert: 'HEMS: Sensor aktualisiert',
+  hems_sensor_stillgelegt: 'HEMS: Sensor stillgelegt',
+  hems_zuordnung: 'HEMS: Rolle zugeordnet',
 }
 
 export function Protokoll() {

@@ -10,7 +10,8 @@ import type { Catalog, Sensor, SensorFieldsValue } from '../types'
 
 /* Einen Sensor bearbeiten oder löschen. Entität und Attribut sind fest – wer
    eine andere Quelle will, legt einen neuen Sensor an; die Messreihe bleibt so
-   eindeutig einer Quelle zugeordnet. */
+   eindeutig einer Quelle zugeordnet. Von Skytech HEMS verwaltete Sensoren
+   (D-027) zeigt die Seite nur an – geändert werden sie im HEMS. */
 
 const FIELDS: (keyof SensorFieldsValue)[] = [
   'name', 'kategorie', 'groesse', 'rolle', 'soll_ist_paar', 'einheit', 'anlage', 'energie_zaehler', 'aktiv',
@@ -106,7 +107,29 @@ export function SensorBearbeiten() {
       <div className="content form-content">
         {loadError ? <div className="alert">{loadError}</div> : null}
         {!draft && !loadError ? <div className="center"><div className="spinner" /></div> : null}
-        {sensor && draft && catalog ? (
+        {sensor && catalog && sensor.verwaltet_von ? (
+          <>
+            <div className="info-strip">
+              <Icon name="key" size={16} />
+              Über Vertrag verwaltet — Skytech HEMS. Dieser Sensor ist hier gesperrt und lässt sich nur im HEMS-Tab
+              „Dynamischer Strompreis“ ändern oder austauschen.
+            </div>
+            <div className="card">
+              <div className="card-body">
+                <div className="kv-row"><span className="k">HEMS-Rolle</span><span className="v mono">{sensor.hems_rollen.length ? sensor.hems_rollen.join(', ') : 'keine'}</span></div>
+                <div className="kv-row"><span className="k">Kategorie</span><span className="v">{catalog.kategorien.find((entry) => entry.schluessel === sensor.kategorie)?.bezeichnung ?? sensor.kategorie}</span></div>
+                <div className="kv-row"><span className="k">Größe</span><span className="v">{catalog.groessen.find((entry) => entry.schluessel === sensor.groesse)?.bezeichnung ?? sensor.groesse}</span></div>
+                <div className="kv-row"><span className="k">Einheit</span><span className="v">{sensor.einheit ?? '–'}</span></div>
+                <div className="kv-row"><span className="k">Quelle</span><span className="v">{sensor.quelle === 'hems' ? 'vom HEMS geschrieben' : 'Home Assistant'}</span></div>
+                <div className="kv-row"><span className="k">Aufzeichnung</span><span className="v">{sensor.aktiv ? 'aktiv' : 'stillgelegt'}</span></div>
+                <div className="kv-row"><span className="k">Letzter Wert</span><span className="v">{fmtValue(sensor.letzter_wert, sensor.letzter_text, sensor.einheit)}</span></div>
+                <div className="kv-row"><span className="k">Zeitpunkt</span><span className="v">{sensor.letzte_zeit_text ?? 'noch kein Wert'}</span></div>
+                <div className="kv-row"><span className="k">Sensor-ID (SQL)</span><span className="v mono">{sensor.id}</span></div>
+              </div>
+            </div>
+          </>
+        ) : null}
+        {sensor && draft && catalog && !sensor.verwaltet_von ? (
           <>
             <div className="card">
               <div className="card-body">

@@ -11,6 +11,7 @@
 | PostgreSQL im LAN (5432) | nur `skytech_admin`/`skytech_reader`, nur Datenbank `skytech`, nur mit Passwort (SCRAM); ohne Passwort gesperrt. Unverschlüsselt – nur im LAN nutzen |
 | MCP-Server (8765) | nur mit `mcp_token` (Bearer, Vergleich in konstanter Zeit); ohne Token aus. **Vollzugriff** auf Daten und Dashboards, deshalb Sicherung vor jeder Änderung und Protokoll, [mcp.md](mcp.md) |
 | Grafana-Datenquelle | interne Rolle `skytech_grafana` (nur lesen, nur 127.0.0.1), Passwort erzeugt in `/data/secrets` |
+| SkytechHEMS | Rolle `skytech_hems`, nur aus dem Add-on-Netz `172.30.33.0/24` (nicht über den LAN-Port), nur mit Passwort `hems_password`. Schreibt ausschließlich über geprüfte Funktionen; die von ihm verwalteten Sensoren sind für alle anderen gesperrt (D-027, [Vertrag](../contract/contract_hems_data_insight/contract_hems_data_insight.md)) |
 | Home Assistant | WebSocket-API über den Supervisor mit dessen Token; das Add-on liest nur (Zustände, Verlauf) und schreibt nichts nach HA |
 | Supervisor | Rolle `manager` (D-025), genutzt ausschließlich für `/addons/self/info`, `/addons/self/options` (prüfen, speichern) und `/network/info` – für die Seite „Zugänge“ |
 

@@ -35,6 +35,13 @@ function connectionRows(item: AccessItem, host: string): [string, string][] {
       return [['Adresse', address ? `http://${address}/` : 'Port nicht freigegeben'], ['Benutzer', item.benutzer ?? '']]
     case 'mcp':
       return [['URL', address ? `http://${address}/mcp` : 'Port nicht freigegeben'], ['Anmeldung', 'Authorization: Bearer <Token>']]
+    case 'hems':
+      return [
+        ['Erreichbar', 'nur intern im Add-on-Netz, nicht aus dem LAN'],
+        ['Datenbank', 'skytech'],
+        ['Benutzer', item.benutzer ?? ''],
+        ['Im HEMS eintragen', 'insight_password (Host bleibt auf auto)'],
+      ]
   }
 }
 

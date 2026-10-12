@@ -16,6 +16,7 @@ Neustart an (D-025); auf der Konfigurationsseite erscheint danach derselbe Wert.
 | `grafana_admin_password` | Passwort, optional | leer | Passwort des Grafana-Benutzers `admin` für die Anmeldung im LAN. Leer = bei jedem Start ein Zufallspasswort, LAN-Anmeldung damit gesperrt (D-011). Wird bei jedem Start gesetzt – eine Änderung wirkt nach dem Neustart des Add-ons |
 | `db_password` | Passwort, optional | leer | Passwort von `skytech_admin` (Vollzugriff aus dem LAN, z. B. VSCode). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
 | `db_readonly_password` | Passwort, optional | leer | Passwort von `skytech_reader` (nur lesen). Leer = gesperrt. Wirkt nach Neustart, über „Zugänge“ sofort |
+| `hems_password` | Passwort, optional | leer | Passwort von `skytech_hems` für SkytechHEMS, nur im internen Add-on-Netz. Leer = gesperrt. Über „Zugänge“ erzeugen, im HEMS als `insight_password` eintragen (D-027) |
 | `mcp_token` | Passwort, optional | leer | Token des MCP-Servers (mindestens 16 Zeichen). Leer = MCP-Server aus. Über „Zugänge“ neu erzeugt, startet nur der MCP-Server neu. [mcp.md](mcp.md) |
 
 ## Grafana in einem HA-Dashboard einbinden

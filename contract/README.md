@@ -21,7 +21,7 @@ Beschreibung der gemeinsamen Felder zu führen.
 
 | Gegenstelle | Vertrag | Stand / Hinweise |
 |---|---|---|
-| SkytechHEMS | [contract_hems_data_insight.md](contract_hems_data_insight/contract_hems_data_insight.md) | Version 0.1, Entwurf: Rolle `skytech_hems`, vom HEMS verwaltete Sensoren, Rollen-Zuordnung, Prognose- und Preisläufe (D-027). Noch nicht implementiert. |
+| SkytechHEMS | [contract_hems_data_insight.md](contract_hems_data_insight/contract_hems_data_insight.md) | Version 0.2: Rolle `skytech_hems`, Schreiben über geprüfte Funktionen, vom HEMS verwaltete Sensoren, Rollen-Zuordnung, Prognose- und Preisläufe (D-027). Hier implementiert, HEMS-Seite offen. |
 
 Die übrigen HTTP-/MCP- und Datenbankschnittstellen sind kein bilateraler Vertrag und bleiben in
 [API-Referenz](../docs/api-referenz.md) und [Datenmodell](../docs/datenmodell.md) beschrieben.

@@ -42,8 +42,12 @@ und `paare` (Strings).
 
 ## `GET api/sensors`
 
-`{"sensors": [...]}` – alle Sensoren mit allen Spalten aus `skytech.sensor` sowie `letzte_zeit`
-(ISO), `letzte_zeit_text` (Berliner Zeit), `letzter_wert`, `letzter_text`.
+`{"sensors": [...]}` – alle Sensoren mit allen Spalten aus `skytech.sensor` (darunter
+`verwaltet_von`) sowie `hems_rollen` (aktuelle HEMS-Rollen, Liste), `letzte_zeit` (ISO),
+`letzte_zeit_text` (Berliner Zeit), `letzter_wert`, `letzter_text`.
+
+`PUT` und `DELETE` auf einen Sensor mit `verwaltet_von = 'hems'` antworten mit `409` und dem
+Grund – er gehört SkytechHEMS ([Vertrag](../contract/contract_hems_data_insight/contract_hems_data_insight.md), D-027).
 
 ## `POST api/sensors`
 
@@ -101,7 +105,7 @@ Dieselbe Logik nutzt das MCP-Werkzeug `aufbewahrung_setzen` (`app/settings_servi
 
 | Aufruf | Wirkung |
 |---|---|
-| `GET api/access` | `{verfuegbar, host, zugaenge: [{schluessel, bezeichnung, option, benutzer, gesetzt, port}]}` – `schluessel`: `datenbank`, `datenbank_lesen`, `grafana`, `mcp`. `gesetzt` nur als Ja/Nein (MCP: erst ab 16 Zeichen), nie der Wert. `port` = Port im LAN, `null` = nicht freigegeben. `host` = IPv4 der primären Schnittstelle des HA-Hosts. Ohne Supervisor (lokaler Test) `verfuegbar: false` |
+| `GET api/access` | `{verfuegbar, host, zugaenge: [{schluessel, bezeichnung, option, benutzer, gesetzt, intern, port}]}` – `schluessel`: `datenbank`, `datenbank_lesen`, `grafana`, `mcp`, `hems`. `intern: true` (nur `hems`): erreichbar nur im Add-on-Netz, `port` dann immer `null`. `gesetzt` nur als Ja/Nein (MCP: erst ab 16 Zeichen), nie der Wert. `port` = Port im LAN, `null` = nicht freigegeben. `host` = IPv4 der primären Schnittstelle des HA-Hosts. Ohne Supervisor (lokaler Test) `verfuegbar: false` |
 | `POST api/access/{schluessel}/neu` | Body `{"bestaetigung": "<schluessel>"}`. Erzeugt ein Secret (32 Zeichen), speichert es in den Add-on-Optionen und wendet es sofort an. Antwort `{zugang, secret, warnung}` mit `Cache-Control: no-store` – das Secret steht **nur hier**. `warnung` gesetzt: gespeichert, aber erst nach einem Neustart wirksam |
 | `POST api/access/{schluessel}/sperren` | wie oben, leert die Option und sperrt den Zugang (`secret: null`) |
 

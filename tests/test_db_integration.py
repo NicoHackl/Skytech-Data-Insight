@@ -7,6 +7,7 @@ Jeder Lauf legt die Datenbank `skytech_test` neu an. Rollen werden per
 """
 
 import asyncio
+import json
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -24,7 +25,7 @@ from ha_client import HAClient
 
 DSN = os.environ.get("SKYTECH_TEST_DSN")
 TEST_DB = "skytech_test"
-ROLES = ("skytech_app", "skytech_collector", "skytech_admin", "skytech_reader")
+ROLES = ("skytech_app", "skytech_collector", "skytech_admin", "skytech_reader", "skytech_hems")
 T0 = datetime(2026, 9, 27, 10, 0, tzinfo=timezone.utc)
 
 pytestmark = [
@@ -64,7 +65,7 @@ async def pools():
     collector_pool = await _pool("skytech_collector")
     async with app_pool.acquire() as connection:
         applied = await migration_runner.migrate(connection, migration_runner.discover(site_dir=Path("/nonexistent")))
-        assert [m.version for m in applied] == [1, 2]
+        assert [m.version for m in applied] == [1, 2, 3]
         assert await connection.fetchval("SELECT bezeichnung FROM skytech.groesse WHERE schluessel = 'preis'") == "Preis"
     yield app_pool, collector_pool
     await collector_pool.close()
@@ -423,3 +424,228 @@ async def test_migration_overview_states(pools, tmp_path):
         items = await migration_runner.overview(connection, migration_runner.discover(changed, tmp_path / "leer"))
         states = {item["version"]: item["status"] for item in items}
         assert states[1] == "geaendert" and states[2] == "datei_fehlt"
+
+
+# ---------------------------------------------------------------------------
+# SkytechHEMS (D-027, Vertrag contract_hems_data_insight 0.2)
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture(loop_scope="module")
+async def hems(clean):
+    async with clean[0].acquire() as connection:
+        await connection.execute("TRUNCATE skytech.prognose_lauf RESTART IDENTITY CASCADE")
+    pool = await _pool("skytech_hems")
+    yield pool
+    await pool.close()
+
+
+async def _sichern(connection, entity_id, quelle="ha", name=None, kategorie="verbraucher", groesse="leistung",
+                   einheit="W", attribut=None):
+    return await connection.fetchval(
+        "SELECT skytech.hems_sensor_sichern($1, $2, $3, $4, $5, $6, $7)",
+        entity_id, attribut, name or entity_id, kategorie, groesse, einheit, quelle)
+
+
+async def test_hems_role_only_reads_and_calls_functions(clean, hems):
+    async with hems.acquire() as connection:
+        assert await connection.fetchval("SELECT version FROM skytech.v_hems_vertrag") == "0.2"
+        assert await connection.fetchval("SELECT count(*) FROM skytech.v_messwert_15min") == 0
+        for statement in (
+            "INSERT INTO skytech.sensor (entity_id, name, kategorie, groesse) VALUES ('sensor.x', 'x', 'pv', 'leistung')",
+            "INSERT INTO skytech.messwert VALUES (now(), 1, 1, NULL)",
+            "INSERT INTO skytech.prognose_lauf (art, quelle, erstellt, raster_min, gueltig_ab, gueltig_bis, einheit) "
+            "VALUES ('preis', 'x', now(), 15, now(), now() + interval '1 hour', '€/kWh')",
+            "SELECT * FROM skytech_config.aenderungsprotokoll",
+            "SELECT skytech_config.hems_protokoll('x', '{}')",
+        ):
+            with pytest.raises(asyncpg.InsufficientPrivilegeError):
+                await connection.execute(statement)
+    async with clean[0].acquire() as connection:
+        # Die Schreibfunktionen sind nicht für alle freigegeben.
+        reader = await _pool("skytech_reader")
+        try:
+            async with reader.acquire() as reader_connection:
+                with pytest.raises(asyncpg.InsufficientPrivilegeError):
+                    await _sichern(reader_connection, "sensor.x")
+        finally:
+            await reader.close()
+
+
+async def test_hems_adopts_existing_sensor_and_locks_it(clean, hems):
+    app_pool, _ = clean
+    async with app_pool.acquire() as connection:
+        existing = await _sensor(connection, "sensor.e3dc_leistung_haus_modbus", anlage="Haus")
+    async with hems.acquire() as connection:
+        adopted = await _sichern(connection, "sensor.e3dc_leistung_haus_modbus", name="Hausverbrauch")
+        created = await _sichern(connection, "sensor.pv_ist", kategorie="pv")
+        own = await _sichern(connection, "hems.grundlast_w", quelle="hems")
+        assert adopted == existing and created != existing
+        # Erneut sichern ändert nichts und liefert dieselbe ID.
+        assert await _sichern(connection, "sensor.e3dc_leistung_haus_modbus", name="Hausverbrauch") == existing
+        with pytest.raises(asyncpg.PostgresError, match="passt nicht zur Quelle"):
+            await _sichern(connection, "hems.falsch", quelle="ha")
+        await connection.execute("SELECT skytech.hems_zuordnen('hausverbrauch', $1)", existing)
+    async with app_pool.acquire() as connection:
+        # Von Hand angelegt, aber mit hems.-Namen: das HEMS übernimmt keinen Sensor mit falscher Quelle.
+        foreign = await _sensor(connection, "hems.fremd")
+    async with hems.acquire() as connection:
+        with pytest.raises(asyncpg.PostgresError, match="hat die Quelle"):
+            await _sichern(connection, "hems.fremd", quelle="hems")
+
+    async with app_pool.acquire() as connection:
+        rows = {row["id"]: row for row in await sensor_service.list_sensors(connection)}
+        assert rows[existing]["verwaltet_von"] == "hems" and rows[existing]["name"] == "Hausverbrauch"
+        assert rows[existing]["anlage"] == "Haus"  # nicht vom HEMS gesetzte Felder bleiben
+        assert rows[existing]["hems_rollen"] == ["hausverbrauch"] and rows[created]["hems_rollen"] == []
+        assert rows[own]["quelle"] == "hems" and rows[foreign]["verwaltet_von"] is None
+        with pytest.raises(sensor_service.LockedError):
+            await sensor_service.update_sensor(connection, existing, {"aktiv": False}, "nico")
+        with pytest.raises(sensor_service.LockedError):
+            await sensor_service.delete_sensor(connection, existing, "nico")
+        # Auch direktes SQL scheitert am Trigger.
+        with pytest.raises(asyncpg.PostgresError) as locked:
+            await connection.execute("UPDATE skytech.sensor SET name = 'x' WHERE id = $1", existing)
+        assert locked.value.sqlstate == "SKY01"
+        actions = [row["aktion"] for row in await connection.fetch(
+            "SELECT aktion FROM skytech_config.aenderungsprotokoll WHERE quelle = 'hems' ORDER BY id")]
+        assert actions == ["hems_sensor_uebernommen", "hems_sensor_aktualisiert", "hems_sensor_angelegt",
+                           "hems_sensor_angelegt", "hems_zuordnung"]
+
+
+async def test_hems_swaps_sensor_behind_role_without_gap(clean, hems):
+    app_pool, collector_pool = clean
+    async with hems.acquire() as connection:
+        old = await _sichern(connection, "sensor.haus_alt")
+        await connection.execute("SELECT skytech.hems_zuordnen('hausverbrauch', $1)", old)
+        await asyncio.sleep(0.01)
+        new = await _sichern(connection, "sensor.haus_neu")
+        await connection.execute("SELECT skytech.hems_zuordnen('hausverbrauch', $1)", new)
+        await connection.execute("SELECT skytech.hems_zuordnen('hausverbrauch', $1)", new)  # unverändert: nichts
+        await connection.execute("SELECT skytech.hems_sensor_stilllegen($1)", old)
+        mapping = await connection.fetch(
+            "SELECT sensor_id, isfinite(gueltig_ab) AS endlich, gueltig_ab, gueltig_bis FROM skytech.v_hems_zuordnung "
+            "WHERE rolle = 'hausverbrauch' ORDER BY gueltig_ab")
+    assert [row["sensor_id"] for row in mapping] == [old, new]
+    # Die erste Zuordnung gilt ab -infinity: auch die Historie eines übernommenen Sensors zählt.
+    assert mapping[0]["endlich"] is False and mapping[1]["endlich"] is True
+    switch = mapping[1]["gueltig_ab"]
+    assert mapping[0]["gueltig_bis"] == switch and mapping[1]["gueltig_bis"] is None
+
+    start = minute_values.floor_minute(switch) - timedelta(minutes=45)
+    async with app_pool.acquire() as connection:
+        assert await connection.fetchval("SELECT aktiv FROM skytech.sensor WHERE id = $1", old) is False
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 100, NULL), ($1, $3, 200, NULL)",
+                                 start, old, new)
+    async with collector_pool.acquire() as connection:
+        await minute_values.compute(connection, start, start + timedelta(minutes=90), [old, new])
+    async with hems.acquire() as connection:
+        rows = await connection.fetch(
+            "SELECT zeit, sensor_id FROM skytech.v_hems_rolle_15min WHERE rolle = 'hausverbrauch' ORDER BY zeit")
+    assert rows and len({row["zeit"] for row in rows}) == len(rows)
+    assert all(row["sensor_id"] == (old if row["zeit"] < switch else new) for row in rows)
+    assert {row["sensor_id"] for row in rows} == {old, new}
+
+
+async def test_hems_series_written_late_are_recomputed(clean, hems):
+    app_pool, collector_pool = clean
+    async with hems.acquire() as connection:
+        series = await _sichern(connection, "hems.grundlast_w", quelle="hems")
+        ha_sensor = await _sichern(connection, "sensor.haus")
+    collector = Collector(app_pool, collector_pool)
+    await collector.start()
+    try:
+        assert series in collector.active_sensor_ids and series not in collector.ha_sensor_ids
+        assert ha_sensor in collector.ha_sensor_ids
+        slot = minute_values.floor_minute(datetime.now(timezone.utc)) - timedelta(minutes=30)
+        slot = slot.replace(minute=slot.minute - slot.minute % 15)
+        async with hems.acquire() as connection:
+            written = await connection.fetchval(
+                "SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", series, [slot, slot + timedelta(minutes=15)],
+                [1100.0, 900.0])
+            assert written == 2
+            assert await connection.fetchval(
+                "SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", series, [slot], [5.0]) == 0
+            for zeiten, werte, text in (
+                ([datetime.now(timezone.utc) + timedelta(hours=1)], [1.0], "Zukunft"),
+                ([slot], [float("nan")], "endlich"),
+                ([slot, slot], [1.0], "gleich lang"),
+            ):
+                with pytest.raises(asyncpg.PostgresError, match=text):
+                    await connection.execute("SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", series, zeiten, werte)
+            with pytest.raises(asyncpg.PostgresError, match="Quelle hems"):
+                await connection.execute("SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", ha_sensor, [slot], [1.0])
+        await _wait_for(lambda: _is_late(collector, series))
+        await collector.compute_minutes(datetime.now(timezone.utc))
+        async with app_pool.acquire() as connection:
+            first = await connection.fetchval(
+                "SELECT mittel FROM skytech.messwert_15min WHERE sensor_id = $1 AND zeit = $2", series, slot)
+        assert first == pytest.approx(1100.0)
+    finally:
+        await collector.stop()
+
+
+async def _is_late(collector, sensor_id):
+    return sensor_id in collector._late
+
+
+async def _lauf(connection, art, erstellt, ab, werte, raster=15, details=None, p10=None, p90=None):
+    zeiten = [ab + timedelta(minutes=raster * i) for i in range(len(werte))]
+    return await connection.fetchval(
+        "SELECT skytech.hems_lauf_schreiben($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+        art, "test", erstellt, raster, ab, ab + timedelta(minutes=raster * max(len(werte), 1)),
+        "€/kWh" if art == "preis" else "W", None, json.dumps(details if details is not None else {}),
+        zeiten, werte, p10, p90)
+
+
+async def test_hems_runs_views_and_cleanup(clean, hems):
+    app_pool, collector_pool = clean
+    day = datetime(2026, 10, 10, 22, 0, tzinfo=timezone.utc)  # 11.10.2026 00:00 in Berlin
+    pv_details = {"entity": "sensor.helios", "ist_rolle": "pv_ist", "heute_kwh": 1, "morgen_kwh": 2, "rest_heute_kwh": 0}
+    async with hems.acquire() as connection:
+        # Vortagslauf und ein jüngerer Lauf für dieselben Slots.
+        await _lauf(connection, "pv", day - timedelta(days=1), day, [1000.0, 2000.0], details=pv_details,
+                    p10=[800.0, 1500.0], p90=[1200.0, 2500.0])
+        await _lauf(connection, "pv", day - timedelta(hours=1), day, [1100.0, 2100.0], details=pv_details)
+        await _lauf(connection, "preis", day - timedelta(hours=10), day, [0.30, 0.20], raster=60,
+                    details={"entity": "sensor.epex"})
+        await _lauf(connection, "auswertung", day, day, [], details={"reichweite_h": 5})
+        for args, text in (
+            (("pv", day, day, [1.0], 15, {"entity": "x"}), "fehlt: ist_rolle"),
+            (("pv", day, day, [1.0], 60, pv_details), "15-min-Raster"),
+            (("auswertung", day, day, [1.0], 15, {}), "keine Werte"),
+            (("gibtsnicht", day, day, [1.0], 15, {}), "Unbekannte Art"),
+        ):
+            with pytest.raises(asyncpg.PostgresError, match=text):
+                await _lauf(connection, *args[:4], raster=args[4], details=args[5])
+
+        pv_ist = await _sichern(connection, "sensor.pv_ist", kategorie="pv")
+        await connection.execute("SELECT skytech.hems_zuordnen('pv_ist', $1)", pv_ist)
+    async with app_pool.acquire() as connection:
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 900, NULL)", day, pv_ist)
+    async with collector_pool.acquire() as connection:
+        await minute_values.compute(connection, day, day + timedelta(minutes=30), [pv_ist])
+
+    async with hems.acquire() as connection:
+        current = await connection.fetch("SELECT wert FROM skytech.v_prognose_aktuell WHERE art = 'pv' ORDER BY zeit")
+        assert [row["wert"] for row in current] == [1100.0, 2100.0]
+        prices = await connection.fetch("SELECT zeit, bis, preis_eur_kwh FROM skytech.v_preis ORDER BY zeit")
+        assert [row["preis_eur_kwh"] for row in prices] == [0.30, 0.20]
+        assert prices[0]["bis"] - prices[0]["zeit"] == timedelta(hours=1)
+        compared = await connection.fetch(
+            "SELECT prognose, prognose_vortag, ist FROM skytech.v_prognose_vs_ist WHERE art = 'pv' ORDER BY zeit")
+        assert (compared[0]["prognose"], compared[0]["prognose_vortag"], compared[0]["ist"]) == (1100.0, 1000.0, 900.0)
+        quality = await connection.fetchrow("SELECT * FROM skytech.v_prognose_guete_tag WHERE art = 'pv'")
+        assert quality["slots"] == 2 and quality["anteil_im_band"] == pytest.approx(0.5)
+        assert quality["tag"].astimezone(timezone(timedelta(hours=2))).hour == 0
+
+    async with app_pool.acquire() as connection:
+        await connection.execute(
+            "UPDATE skytech_config.einstellung SET wert = '1' WHERE schluessel = 'aufbewahrung_prognose_tage'")
+        try:
+            await connection.execute("CALL skytech_config.prognose_aufraeumen(0, '{}')")
+        finally:
+            await connection.execute(
+                "UPDATE skytech_config.einstellung SET wert = '365' WHERE schluessel = 'aufbewahrung_prognose_tage'")
+        remaining = [row["art"] for row in await connection.fetch("SELECT art FROM skytech.prognose_lauf ORDER BY id")]
+        assert remaining == ["preis"]
+        assert await connection.fetchval("SELECT count(*) FROM skytech.prognose_wert") == 2

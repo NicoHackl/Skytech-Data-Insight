@@ -62,6 +62,10 @@ export interface SensorDraft extends SensorFieldsValue {
 export interface Sensor extends SensorDraft {
   id: number
   quelle: string
+  /** D-027: `hems` = über den Vertrag von SkytechHEMS verwaltet und gesperrt. */
+  verwaltet_von: 'hems' | null
+  /** Aktuelle HEMS-Rollen dieses Sensors, z. B. `hausverbrauch`. */
+  hems_rollen: string[]
   erstellt_am: string
   letzte_zeit: string | null
   letzte_zeit_text: string | null
@@ -159,7 +163,7 @@ export interface Retention {
 
 /* Protokoll (M3) */
 
-export type LogSource = 'ui' | 'mcp' | 'system'
+export type LogSource = 'ui' | 'mcp' | 'system' | 'hems'
 
 export interface LogEntry {
   id: number
@@ -204,7 +208,7 @@ export interface MigrationSql {
 
 /* Zugänge (M3, D-025) */
 
-export type AccessKey = 'datenbank' | 'datenbank_lesen' | 'grafana' | 'mcp'
+export type AccessKey = 'datenbank' | 'datenbank_lesen' | 'grafana' | 'mcp' | 'hems'
 
 export interface AccessItem {
   schluessel: AccessKey
@@ -213,6 +217,8 @@ export interface AccessItem {
   benutzer: string | null
   /** `null` = unbekannt (lokaler Test ohne Supervisor). */
   gesetzt: boolean | null
+  /** Nur im internen Add-on-Netz erreichbar (SkytechHEMS), nie über einen LAN-Port. */
+  intern: boolean
   /** Port im LAN; `null` = nicht freigegeben oder unbekannt. */
   port: number | null
 }

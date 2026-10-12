@@ -41,7 +41,8 @@ skytech.messwert  ──(minute_values.py)──►  skytech.messwert_1min
 | `einheit`, `anlage` | frei; `anlage` fasst Sensoren einer Anlage zusammen |
 | `energie_zaehler` | Zählerstand (HA `state_class` total/total_increasing): Minutenwerte tragen den Zuwachs |
 | `aktiv` | aus = keine neuen Werte, vorhandene bleiben |
-| `quelle` | `ha` (heute), `hems` für Messreihen, die SkytechHEMS selbst schreibt (Vertrag, Entwurf), `extern` vorbereitet |
+| `quelle` | `ha` (aus Home Assistant), `hems` für Messreihen, die SkytechHEMS selbst schreibt, `extern` vorbereitet |
+| `verwaltet_von` | leer oder `hems` (vom HEMS verwaltet und gesperrt, siehe unten) |
 
 Eindeutig: je Entität der Zustand und jedes Attribut höchstens einmal. Jede Änderung an der
 Tabelle meldet sich per `NOTIFY skytech_sensor` beim Collector – auch Änderungen per SQL wirken
@@ -115,14 +116,25 @@ WHERE kategorie = 'pv' AND groesse = 'energie'
 ORDER BY tag;
 ```
 
-## Geplant: Anbindung von SkytechHEMS (Vertrag, Entwurf)
+## Anbindung von SkytechHEMS (Migration 0003, D-027)
 
-Für den dynamischen Strompreis kommen eine Rolle `skytech_hems`, die Spalte
-`sensor.verwaltet_von` (vom HEMS verwaltete, gesperrte Sensoren), die Tabelle `hems_zuordnung`
-(Rolle → Sensor), die Tabellen `prognose_lauf`/`prognose_wert` und zugehörige Sichten dazu.
-Noch nicht gebaut. Maßgeblich für Namen, Spalten und Rechte ist der
-[Vertrag mit SkytechHEMS](../contract/contract_hems_data_insight/contract_hems_data_insight.md)
-(D-027); diese Datei beschreibt sie erst, wenn sie umgesetzt sind.
+Für den dynamischen Strompreis schreibt SkytechHEMS über die Rolle `skytech_hems` – ausschließlich
+über die Funktionen `hems_sensor_sichern`, `hems_sensor_stilllegen`, `hems_zuordnen`,
+`hems_messwerte_schreiben` und `hems_lauf_schreiben`. Dazu gehören:
+
+| Objekt | Inhalt |
+|---|---|
+| `sensor.verwaltet_von` | `hems` = vom HEMS angelegt oder übernommen; ein Trigger sperrt Änderungen und Löschen für alle anderen (SQLSTATE `SKY01`) |
+| `hems_zuordnung`, `v_hems_zuordnung` | HEMS-Rolle (z. B. `hausverbrauch`) → Sensor mit Gültigkeit; die erste Zuordnung gilt ab `-infinity` |
+| `v_hems_rolle_15min` | 15-min-Werte je Rolle, über Sensorwechsel hinweg |
+| `prognose_lauf`, `prognose_wert` (Hypertable) | Preis-, PV-, Verbrauchs- und Auswertungsläufe |
+| `v_prognose_aktuell`, `v_prognose_vortag`, `v_preis`, `v_prognose_vs_ist`, `v_prognose_guete_tag` | Prognosen, Endpreis, Prognose gegen Ist, Prognosegüte je Berliner Tag |
+| `v_hems_vertrag` | erfüllte Vertragsversion |
+
+Spalten, Pflichtangaben und Rechte stehen verbindlich im
+[Vertrag mit SkytechHEMS](../contract/contract_hems_data_insight/contract_hems_data_insight.md); diese Datei wiederholt sie nicht.
+Sensoren mit `quelle = 'hems'` (`hems.<name>`) holt der Collector nicht aus HA; ihre Minutenwerte
+rechnet er nach, sobald das HEMS Werte schreibt.
 
 ## Konfiguration und Protokoll (Schema `skytech_config`)
 
@@ -130,7 +142,7 @@ Noch nicht gebaut. Maßgeblich für Namen, Spalten und Rechte ist der
 |---|---|
 | `einstellung` | Schlüssel/Wert (JSON) mit Beschreibung, z. B. Aufbewahrung |
 | `migration` | angewendete Migrationen: Nummer, Name, Quelle (`system`/`anlage`), Prüfsumme |
-| `aenderungsprotokoll` | Änderungen über Oberfläche (später MCP): Zeit, Quelle, HA-Benutzer, Aktion, Details |
+| `aenderungsprotokoll` | Änderungen über Oberfläche, MCP, System und SkytechHEMS (`ui`, `mcp`, `system`, `hems`): Zeit, Quelle, Benutzer, Aktion, Details |
 
 ## Migrationen
 
@@ -149,6 +161,7 @@ Noch nicht gebaut. Maßgeblich für Namen, Spalten und Rechte ist der
 | `skytech_admin` | LAN, Passwort `db_password`; Socket für den MCP-Server | Mitglied von `skytech_app`: alles lesen, schreiben, Schema ändern |
 | `skytech_reader` | LAN, Passwort `db_readonly_password` | lesen in `skytech` und `skytech_config` |
 | `skytech_grafana` | nur 127.0.0.1, erzeugtes Passwort | Mitglied von `skytech_reader`; Grafana-Datenquelle (D-022) |
+| `skytech_hems` | nur Add-on-Netz `172.30.33.0/24`, Passwort `hems_password` | nur `EXECUTE` auf die `hems_*`-Funktionen und `SELECT` auf die Vertragsobjekte (D-027) |
 
 Nur Datenbank `skytech`; ohne gesetztes Passwort ist die LAN-Anmeldung gesperrt. Was
 `skytech_admin` neu anlegt, darf `skytech_reader` automatisch lesen. Zugang aus VSCode:

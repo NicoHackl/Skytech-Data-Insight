@@ -63,6 +63,8 @@ Der Server gibt dem Modell beim Verbinden eine Beschreibung von Datenmodell, Gra
 - Grafana-Dashboards stehen nicht im `pg_dump`; beim Überschreiben führt Grafana eine
   Versionsgeschichte, **Löschen ist endgültig**.
 - Ohne `mcp_token` (oder mit weniger als 16 Zeichen) startet der Server nicht.
+- Sensoren, die SkytechHEMS verwaltet (`verwaltet_von = 'hems'`), lehnt der Server ab – auch über
+  `sql_ausfuehren` greift die Sperre der Datenbank (D-027).
 
 > **Sicherheitshinweis:** Das Token gewährt vollen Zugriff auf die Daten. Port 8765 nie ins
 > Internet freigeben, Token nicht weitergeben; bei Verdacht in der Konfiguration ändern und neu

@@ -12,9 +12,15 @@ Ablauf:
    seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen.
 
 Änderungen an der Sensorliste (Oberfläche oder SQL) kommen per LISTEN/NOTIFY.
+
+Sensoren mit `quelle = 'hems'` schreibt SkytechHEMS selbst (Vertrag
+contract_hems_data_insight). Für sie holt der Collector nichts aus HA; neue
+Werte meldet die Datenbankfunktion per NOTIFY `skytech_hems_werte`, damit die
+Minutenwerte ab dem frühesten neuen Zeitpunkt neu gerechnet werden.
 """
 
 import asyncio
+import json
 import logging
 from collections import deque
 from dataclasses import dataclass
@@ -52,6 +58,8 @@ class SensorConfig:
     entity_id: str
     attribute: str | None
     active: bool
+    # False: Werte schreibt SkytechHEMS selbst (quelle = 'hems'), nicht Home Assistant.
+    from_ha: bool = True
 
 
 @dataclass(frozen=True)
@@ -107,6 +115,7 @@ class Collector:
         self._watermark = await self._initial_watermark()
         self._listener_connection = await self._app_pool.acquire()
         await self._listener_connection.add_listener("skytech_sensor", self._on_notify)
+        await self._listener_connection.add_listener("skytech_hems_werte", self._on_hems_values)
         self._tasks = [
             asyncio.create_task(self._flush_loop(), name="collector-flush"),
             asyncio.create_task(self._minute_loop(), name="collector-minute"),
@@ -133,6 +142,7 @@ class Collector:
         await self.flush()
         if self._listener_connection is not None:
             await self._listener_connection.remove_listener("skytech_sensor", self._on_notify)
+            await self._listener_connection.remove_listener("skytech_hems_werte", self._on_hems_values)
             await self._app_pool.release(self._listener_connection)
 
     # ------------------------------------------------------------------
@@ -142,10 +152,27 @@ class Collector:
     def _on_notify(self, *_args: Any) -> None:
         asyncio.get_running_loop().create_task(self._reload_after_change())
 
+    def _on_hems_values(self, _connection: Any, _pid: int, _channel: str, payload: str) -> None:
+        """SkytechHEMS hat Werte geschrieben – oft für einen schon gerechneten Slot."""
+        try:
+            data = json.loads(payload)
+            sensor_id = int(data["sensor_id"])
+            start = parse_timestamp(data["ab"])
+        except (ValueError, KeyError, TypeError):
+            log.warning("Unlesbare Meldung skytech_hems_werte: %r", payload)
+            return
+        self.mark_hems_values(sensor_id, start)
+
+    def mark_hems_values(self, sensor_id: int, start: datetime | None) -> None:
+        """Minutenwerte ab `start` neu rechnen, höchstens MAX_BACKFILL zurück."""
+        if start is None or self._watermark is None or start >= self._watermark:
+            return
+        self._mark_late(sensor_id, max(start, self._watermark - MAX_BACKFILL))
+
     async def _reload_after_change(self) -> None:
         previous = {sensor_id for sensor_id, s in self._sensors.items() if s.active}
         await self.reload_sensors()
-        added = [s for s in self._sensors.values() if s.active and s.id not in previous]
+        added = [s for s in self._sensors.values() if s.active and s.from_ha and s.id not in previous]
         # Neu aktivierte Sensoren sofort mit dem aktuellen Zustand beginnen.
         if added and self.ha is not None:
             for sensor in added:
@@ -155,18 +182,25 @@ class Collector:
 
     async def reload_sensors(self) -> None:
         async with self._pool.acquire() as connection:
-            rows = await connection.fetch("SELECT id, entity_id, attribut, aktiv FROM skytech.sensor")
-        sensors = {row["id"]: SensorConfig(row["id"], row["entity_id"], row["attribut"], row["aktiv"]) for row in rows}
+            rows = await connection.fetch("SELECT id, entity_id, attribut, aktiv, quelle FROM skytech.sensor")
+        sensors = {row["id"]: SensorConfig(row["id"], row["entity_id"], row["attribut"], row["aktiv"],
+                                           row["quelle"] != "hems") for row in rows}
         by_entity: dict[str, list[SensorConfig]] = {}
         for sensor in sensors.values():
-            if sensor.active:
+            if sensor.active and sensor.from_ha:
                 by_entity.setdefault(sensor.entity_id, []).append(sensor)
         self._sensors, self._by_entity = sensors, by_entity
         log.info("%d Sensoren aktiv.", sum(len(v) for v in by_entity.values()))
 
     @property
     def active_sensor_ids(self) -> list[int]:
+        """Alle aktiven Sensoren – auch die HEMS-Reihen, deren Minutenwerte hier entstehen."""
         return [s.id for s in self._sensors.values() if s.active]
+
+    @property
+    def ha_sensor_ids(self) -> list[int]:
+        """Aktive Sensoren, deren Werte aus Home Assistant kommen."""
+        return [s.id for s in self._sensors.values() if s.active and s.from_ha]
 
     async def _load_last_values(self) -> None:
         async with self._pool.acquire() as connection:
@@ -326,7 +360,7 @@ class Collector:
         assert self.ha is not None
         now = datetime.now(timezone.utc)
         gaps: dict[str, datetime] = {}
-        for sensor_id in self.active_sensor_ids:
+        for sensor_id in self.ha_sensor_ids:
             sensor = self._sensors[sensor_id]
             last = self._last.get(sensor_id)
             if last is not None and now - last[0] > timedelta(seconds=5):
@@ -335,7 +369,7 @@ class Collector:
         if gaps:
             await self.backfill(gaps, now)
         # Danach den aktuellen Zustand – bei neuen Sensoren der erste Wert.
-        for sensor_id in self.active_sensor_ids:
+        for sensor_id in self.ha_sensor_ids:
             sensor = self._sensors[sensor_id]
             state = self.ha.states.get(sensor.entity_id)
             if state is not None:

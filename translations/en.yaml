@@ -24,6 +24,13 @@ configuration:
       Access key for the MCP server (port 8765) that lets an LLM such as Claude
       or ChatGPT work with the database, sensors and Grafana dashboards. At least
       16 random characters. Empty = MCP server off.
+  hems_password:
+    name: Database password for SkytechHEMS
+    description: >-
+      Password of the database user "skytech_hems" that the Skytech HEMS add-on uses over
+      the internal add-on network to write forecasts and its own series and to manage its
+      sensors (contract contract_hems_data_insight). Best generated on the "Access" page and
+      entered in HEMS as insight_password. Empty = login locked.
 network:
   3000/tcp: Grafana in the LAN
   5432/tcp: PostgreSQL in the LAN (VSCode)

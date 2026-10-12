@@ -78,7 +78,10 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
    verspätete oder nachgeladene Werte lösen eine Neuberechnung der betroffenen Sensoren aus.
 6. Änderungen an `skytech.sensor` (Oberfläche oder SQL) kommen per `NOTIFY`; neue Sensoren
    beginnen sofort mit dem aktuellen Zustand.
-7. Beim Stopp (SIGTERM): Puffer schreiben, dann beenden.
+7. Sensoren mit `quelle = 'hems'` schreibt SkytechHEMS selbst (D-027): Der Collector holt für sie
+   nichts aus HA. Schreibt das HEMS Werte, meldet die Datenbank das per `NOTIFY skytech_hems_werte`,
+   und die Minutenwerte werden ab dem frühesten neuen Zeitpunkt neu gerechnet (höchstens 10 Tage).
+8. Beim Stopp (SIGTERM): Puffer schreiben, dann beenden.
 
 Ohne `SUPERVISOR_TOKEN` verbindet sich der Collector nur, wenn `SKYTECH_HA_URL` und
 `SKYTECH_HA_TOKEN` gesetzt sind (lokaler Test).

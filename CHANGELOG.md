@@ -8,6 +8,29 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt — 12.10.2026 (Anbindung von Skytech HEMS, D-027)
+
+- **Skytech HEMS kann Daten schreiben.** Neuer Datenbankbenutzer `skytech_hems`, nur aus dem
+  internen Add-on-Netz erreichbar. Das Passwort erzeugt die Seite „Zugänge“ (neue Karte „Skytech HEMS –
+  Datenbank (intern)“, Option `hems_password`); im HEMS wird es als `insight_password` eingetragen.
+- **Vom HEMS verwaltete Sensoren.** Das HEMS legt die Sensoren, die es braucht, selbst an oder
+  übernimmt vorhandene. Sie stehen auf der Seite „Sensoren“ in einem eigenen Abschnitt „Über Vertrag
+  verwaltet — Skytech HEMS“ und lassen sich hier weder ändern noch löschen – auch nicht per MCP
+  oder SQL. Das HEMS kann sie austauschen, ohne dass der Verlauf abreißt.
+- **Prognosen und Preise.** Neue Tabellen und Sichten für Preis-, PV- und Verbrauchsprognosen des
+  HEMS samt Vergleich mit dem Ist und Prognosegüte je Tag (`v_preis`, `v_prognose_vs_ist`,
+  `v_prognose_guete_tag` …). PV-, Verbrauchs- und Auswertungsläufe werden nach 365 Tagen gelöscht,
+  Preise bleiben.
+- **Eigene Reihen des HEMS** (z. B. Grundlast) erscheinen wie andere Sensoren; ihre Minutenwerte
+  werden nachgerechnet, sobald das HEMS Werte schreibt.
+- Protokoll: neue Quelle „Skytech HEMS“.
+
+### Dokumentation — 12.10.2026 (Vertrag 0.2)
+
+- Vertrag `contract_hems_data_insight` auf Version 0.2: Das HEMS schreibt nur über geprüfte
+  Datenbankfunktionen; zugelassenes Netz `172.30.33.0/24`. Data-Insight-Seite implementiert,
+  HEMS-Seite offen. Wortgleich mit SkytechHEMS.
+
 ### Dokumentation — 12.10.2026 (Vertrag mit SkytechHEMS)
 
 - **Vertrag `contract_hems_data_insight` 0.1 (Entwurf)** wortgleich mit SkytechHEMS und neue

@@ -56,6 +56,7 @@ psql_run() {
         SKYTECH_DB_ADMIN_PASSWORD="${SKYTECH_DB_ADMIN_PASSWORD:-}" \
         SKYTECH_DB_READER_PASSWORD="${SKYTECH_DB_READER_PASSWORD:-}" \
         SKYTECH_DB_GRAFANA_PASSWORD="${SKYTECH_DB_GRAFANA_PASSWORD:-}" \
+        SKYTECH_DB_HEMS_PASSWORD="${SKYTECH_DB_HEMS_PASSWORD:-}" \
         s6-setuidgid postgres "${PGBIN}/psql" --no-psqlrc --quiet --set=ON_ERROR_STOP=1 \
         --host=/run/postgresql --username=postgres "$@"
 }
@@ -63,6 +64,7 @@ psql_run() {
 SKYTECH_DB_ADMIN_PASSWORD=$(skytech::option db_password) \
 SKYTECH_DB_READER_PASSWORD=$(skytech::option db_readonly_password) \
 SKYTECH_DB_GRAFANA_PASSWORD=$(</data/secrets/grafana_db_password) \
+SKYTECH_DB_HEMS_PASSWORD=$(skytech::option hems_password) \
     psql_run --dbname=postgres --file=/usr/share/skytech/bootstrap.sql || bootstrap_ok=false
 # Eigene Sitzung für das Update: TimescaleDB verlangt, dass ALTER EXTENSION
 # der erste Befehl nach dem Verbinden ist.

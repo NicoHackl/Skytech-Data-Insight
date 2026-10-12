@@ -262,6 +262,8 @@ class AdminService:
             return error_response(str(exc), 422, exc.field_errors)
         except sensor_service.NotFoundError:
             return error_response("Sensor nicht gefunden.", 404)
+        except sensor_service.LockedError as exc:
+            return error_response(str(exc), 409)
         return json_response({"ok": True})
 
     async def handle_delete_sensor(self, request: web.Request) -> web.Response:
@@ -271,6 +273,8 @@ class AdminService:
                 await sensor_service.delete_sensor(connection, sensor_id, request_user(request))
         except sensor_service.NotFoundError:
             return error_response("Sensor nicht gefunden.", 404)
+        except sensor_service.LockedError as exc:
+            return error_response(str(exc), 409)
         return json_response({"ok": True})
 
     async def handle_entities(self, _request: web.Request) -> web.Response:

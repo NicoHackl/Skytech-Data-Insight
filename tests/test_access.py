@@ -93,6 +93,10 @@ async def test_overview_reports_status_ports_and_host(supervisor):
     assert by_key["datenbank"]["gesetzt"] is True and by_key["datenbank_lesen"]["gesetzt"] is False
     assert by_key["mcp"]["gesetzt"] is False  # zu kurz – Dienst bleibt aus
     assert by_key["grafana"]["port"] is None and by_key["mcp"]["port"] == 8765
+    # SkytechHEMS (D-027): nur intern, nie mit LAN-Port – auch wenn 5432 freigegeben ist.
+    assert by_key["hems"]["intern"] is True and by_key["hems"]["port"] is None
+    assert by_key["hems"]["benutzer"] == "skytech_hems" and by_key["hems"]["gesetzt"] is False
+    assert by_key["datenbank"]["intern"] is False
     assert "alt-geheim" not in str(result)
 
 

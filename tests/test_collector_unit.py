@@ -181,3 +181,19 @@ async def test_failed_flush_keeps_order_with_new_values():
     assert [r.value.number for r in collector._buffer] == [1.0, 2.0]
     await collector.flush()
     assert collector._pool.written == [1.0, 2.0]
+
+
+def test_hems_series_never_come_from_ha_but_get_recomputed():
+    """Vertrag contract_hems_data_insight: Reihen mit Quelle hems schreibt das HEMS selbst."""
+    collector = make_collector(SensorConfig(1, "sensor.pv", None, True),
+                               SensorConfig(2, "hems.grundlast_w", None, True, from_ha=False))
+    assert collector.active_sensor_ids == [1, 2] and collector.ha_sensor_ids == [1]
+    collector._watermark = T0
+    # Meldung der Datenbank: zwei Stunden zurück – nachgerechnet bis MAX_BACKFILL, nicht nur eine Stunde.
+    collector._on_hems_values(None, 0, "skytech_hems_werte",
+                              f'{{"sensor_id": 2, "ab": "{(T0 - timedelta(hours=2)).isoformat()}"}}')
+    assert collector._late == {2: T0 - timedelta(hours=2)}
+    # Noch nicht gerechnete Minuten und unlesbare Meldungen ändern nichts.
+    collector._on_hems_values(None, 0, "skytech_hems_werte", '{"sensor_id": 1, "ab": "' + T0.isoformat() + '"}')
+    collector._on_hems_values(None, 0, "skytech_hems_werte", "kaputt")
+    assert collector._late == {2: T0 - timedelta(hours=2)}

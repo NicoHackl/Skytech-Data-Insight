@@ -14,6 +14,7 @@ const CONSEQUENCE: Record<AccessKey, string> = {
   datenbank_lesen: 'Gespeicherte Verbindungen mit Lesezugriff müssen danach das neue Passwort bekommen.',
   grafana: 'Die Anmeldung an Grafana im LAN (Port 3000) braucht danach das neue Passwort. Über Home Assistant bleibt Grafana erreichbar.',
   mcp: 'Der MCP-Server startet kurz neu. Alle MCP-Clients (Claude, ChatGPT …) müssen das neue Token eintragen.',
+  hems: 'Skytech HEMS braucht danach das neue Passwort in seiner Option insight_password, sonst schreibt es keine Prognosen mehr.',
 }
 
 export function Zugaenge() {
@@ -59,7 +60,7 @@ export function Zugaenge() {
 
   return (
     <>
-      <PageHeader title="Zugänge" subtitle="Datenbank, Grafana und MCP im LAN" />
+      <PageHeader title="Zugänge" subtitle="Datenbank, Grafana und MCP im LAN, dazu Skytech HEMS" />
       <div className="content">
         {loadError ? <div className="alert">{loadError}</div> : null}
         {!data && !loadError ? <div className="center"><div className="spinner" /></div> : null}

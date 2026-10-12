@@ -61,9 +61,11 @@ options:
   db_password: ""
   db_readonly_password: ""
   mcp_token: ""
+  hems_password: ""
 schema:
   log_level: list(debug|info|warning|error)
   grafana_admin_password: password?
   db_password: password?
   db_readonly_password: password?
   mcp_token: password?
+  hems_password: password?

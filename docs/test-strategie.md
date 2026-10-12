@@ -5,7 +5,7 @@
 | Art | Werkzeug | Umfang |
 |---|---|---|
 | Unit-Tests Python | `pytest -q` | Wertumsetzung, Vorschläge, Eingabeprüfung, Collector (Änderungserkennung, Attribute, Puffer, verspätete Werte), HA-Client gegen nachgebauten HA (`tests/fake_ha.py`: Anmeldung, Abo, Verlauf, Neuverbindung), Dienstprüfungen, Status-API |
-| Integration Datenbank | `SKYTECH_TEST_DSN=… pytest -q` | gegen echte TimescaleDB: Migrationen (idempotent, Prüfsumme, Anlagen-Migration), Minutenwerte (zeitgewichtet, Lücken, Zähler-Neustart, wiederholbar), Verdichtungen (Gewichtung, Berliner Tag), Aufbewahrung, Rollenrechte, Sensorverwaltung samt Protokoll, Collector Ende-zu-Ende mit Nachladen und NOTIFY. Ohne `SKYTECH_TEST_DSN` übersprungen; die CI stellt die Datenbank bereit |
+| Integration Datenbank | `SKYTECH_TEST_DSN=… pytest -q` | gegen echte TimescaleDB: Migrationen (idempotent, Prüfsumme, Anlagen-Migration), Minutenwerte (zeitgewichtet, Lücken, Zähler-Neustart, wiederholbar), Verdichtungen (Gewichtung, Berliner Tag), Aufbewahrung, Rollenrechte, Sensorverwaltung samt Protokoll, Collector Ende-zu-Ende mit Nachladen und NOTIFY, HEMS-Anbindung (Rechte von `skytech_hems`, Übernahme und Sperre, Sensortausch ohne Lücke, nachgerechnete HEMS-Reihen, Läufe, Sichten, Prognosegüte, Aufräumen). Ohne `SKYTECH_TEST_DSN` übersprungen; die CI stellt die Datenbank bereit |
 | Paketierung | `pytest` (`tests/test_packaging.py`) | Manifest, Übersetzungen, s6-Dienste und Abhängigkeiten, jeder Vorlagen-Platzhalter wird gesetzt, Ingress-Sperre und LAN-Header-Entfernung |
 | Lint | `ruff check app tests`, ShellCheck (CI) | Python und Init-/Dienstskripte |
 | Frontend | `cd web && npm run build` | Typprüfung und Bundle; CI prüft Drift des eingecheckten Bundles |

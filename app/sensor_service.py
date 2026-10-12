@@ -17,7 +17,9 @@ _MAX_TEXT = 120
 
 SENSOR_LIST_SQL = """
 SELECT s.id, s.entity_id, s.attribut, s.name, s.kategorie, s.groesse, s.rolle, s.soll_ist_paar,
-       s.einheit, s.anlage, s.energie_zaehler, s.aktiv, s.quelle, s.erstellt_am,
+       s.einheit, s.anlage, s.energie_zaehler, s.aktiv, s.quelle, s.erstellt_am, s.verwaltet_von,
+       coalesce((SELECT array_agg(z.rolle ORDER BY z.rolle) FROM skytech.v_hems_zuordnung z
+                 WHERE z.sensor_id = s.id AND z.gueltig_bis IS NULL), '{}') AS hems_rollen,
        l.zeit AS letzte_zeit, l.wert AS letzter_wert, l.text_wert AS letzter_text
 FROM skytech.sensor s
 LEFT JOIN LATERAL (
@@ -26,6 +28,11 @@ LEFT JOIN LATERAL (
 ) l ON true
 ORDER BY s.kategorie, s.name
 """
+
+# Vom Datenbank-Trigger gemeldet, wenn ein verwalteter Sensor geändert werden soll (Migration 0003).
+_LOCKED_SQLSTATE = "SKY01"
+LOCKED_MESSAGE = ("Dieser Sensor wird über den Vertrag von Skytech HEMS verwaltet und lässt sich nur dort ändern "
+                  "(HEMS-Tab „Dynamischer Strompreis“).")
 
 
 class ValidationError(ValueError):
@@ -38,6 +45,24 @@ class ValidationError(ValueError):
 
 class NotFoundError(LookupError):
     pass
+
+
+class LockedError(PermissionError):
+    """Der Sensor wird von SkytechHEMS verwaltet (D-027); Änderungen nur dort."""
+
+    def __init__(self, sensor_id: int) -> None:
+        super().__init__(LOCKED_MESSAGE)
+        self.sensor_id = sensor_id
+
+
+async def _ensure_unlocked(connection: asyncpg.Connection, sensor_id: int) -> None:
+    """Prüft vorab, damit Oberfläche und MCP einen klaren Grund statt eines Datenbankfehlers zeigen.
+
+    Die eigentliche Sperre ist der Trigger in der Datenbank – er greift auch für direktes SQL.
+    """
+    managed = await connection.fetchval("SELECT verwaltet_von FROM skytech.sensor WHERE id = $1", sensor_id)
+    if managed is not None:
+        raise LockedError(sensor_id)
 
 
 def _clean_text(value: Any) -> str | None:
@@ -105,14 +130,14 @@ def _translate(exc: asyncpg.PostgresError) -> ValidationError:
 
 async def log_change(connection: asyncpg.Connection, user: str | None, action: str, details: dict[str, Any],
                      source: str = "ui") -> None:
-    """Schreibt einen Eintrag ins Änderungsprotokoll (Quelle `ui`, `mcp` oder `system`)."""
+    """Schreibt einen Eintrag ins Änderungsprotokoll (Quelle `ui`, `mcp` oder `system`; `hems` schreibt die Datenbank)."""
     await connection.execute(
         "INSERT INTO skytech_config.aenderungsprotokoll (quelle, benutzer, aktion, details) VALUES ($1, $2, $3, $4::jsonb)",
         source, user, action, json.dumps(details, ensure_ascii=False, default=str),
     )
 
 
-LOG_SOURCES = ("ui", "mcp", "system")
+LOG_SOURCES = ("ui", "mcp", "system", "hems")
 LOG_PAGE_MAX = 200
 
 
@@ -194,11 +219,14 @@ async def update_sensor(connection: asyncpg.Connection, sensor_id: int, data: di
         raise ValidationError("Keine Änderung übergeben.")
     assignments = ", ".join(f"{key} = ${i + 2}" for i, key in enumerate(changes))
     async with connection.transaction():
+        await _ensure_unlocked(connection, sensor_id)
         try:
             result = await connection.execute(
                 f"UPDATE skytech.sensor SET {assignments} WHERE id = $1", sensor_id, *changes.values()
             )
         except asyncpg.PostgresError as exc:
+            if getattr(exc, "sqlstate", None) == _LOCKED_SQLSTATE:
+                raise LockedError(sensor_id) from exc
             raise _translate(exc) from exc
         if result == "UPDATE 0":
             raise NotFoundError(sensor_id)
@@ -208,7 +236,14 @@ async def update_sensor(connection: asyncpg.Connection, sensor_id: int, data: di
 async def delete_sensor(connection: asyncpg.Connection, sensor_id: int, user: str | None) -> None:
     """Löscht den Sensor samt allen Messwerten."""
     async with connection.transaction():
-        row = await connection.fetchrow("DELETE FROM skytech.sensor WHERE id = $1 RETURNING entity_id, attribut, name", sensor_id)
+        await _ensure_unlocked(connection, sensor_id)
+        try:
+            row = await connection.fetchrow(
+                "DELETE FROM skytech.sensor WHERE id = $1 RETURNING entity_id, attribut, name", sensor_id)
+        except asyncpg.PostgresError as exc:
+            if getattr(exc, "sqlstate", None) == _LOCKED_SQLSTATE:
+                raise LockedError(sensor_id) from exc
+            raise
         if row is None:
             raise NotFoundError(sensor_id)
         await log_change(connection, user, "sensor_geloescht", {"id": sensor_id, **dict(row)})

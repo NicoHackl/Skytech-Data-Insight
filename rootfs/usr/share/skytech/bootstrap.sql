@@ -9,12 +9,14 @@
 --   skytech_admin      Vollzugriff aus dem LAN, z. B. VSCode (Passwort)
 --   skytech_reader     nur lesen aus dem LAN (Passwort)
 --   skytech_grafana    Datenquelle von Grafana, liest wie skytech_reader (lokal, erzeugtes Passwort)
+--   skytech_hems       SkytechHEMS über das interne Add-on-Netz (Passwort, Vertrag
+--                      contract_hems_data_insight); Rechte setzt Migration 0003
 
 DO $$
 DECLARE
     rolle text;
 BEGIN
-    FOREACH rolle IN ARRAY ARRAY['skytech_app', 'skytech_collector', 'skytech_admin', 'skytech_reader', 'skytech_grafana'] LOOP
+    FOREACH rolle IN ARRAY ARRAY['skytech_app', 'skytech_collector', 'skytech_admin', 'skytech_reader', 'skytech_grafana', 'skytech_hems'] LOOP
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = rolle) THEN
             EXECUTE format('CREATE ROLE %I LOGIN', rolle);
         END IF;
@@ -37,6 +39,7 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'skytech')
 \getenv admin_password SKYTECH_DB_ADMIN_PASSWORD
 \getenv reader_password SKYTECH_DB_READER_PASSWORD
 \getenv grafana_password SKYTECH_DB_GRAFANA_PASSWORD
+\getenv hems_password SKYTECH_DB_HEMS_PASSWORD
 
 SELECT CASE WHEN :'admin_password' = ''
             THEN 'ALTER ROLE skytech_admin PASSWORD NULL'
@@ -47,4 +50,8 @@ SELECT CASE WHEN :'reader_password' = ''
             ELSE format('ALTER ROLE skytech_reader PASSWORD %L', :'reader_password') END
 \gexec
 SELECT format('ALTER ROLE skytech_grafana PASSWORD %L', :'grafana_password')
+\gexec
+SELECT CASE WHEN :'hems_password' = ''
+            THEN 'ALTER ROLE skytech_hems PASSWORD NULL'
+            ELSE format('ALTER ROLE skytech_hems PASSWORD %L', :'hems_password') END
 \gexec

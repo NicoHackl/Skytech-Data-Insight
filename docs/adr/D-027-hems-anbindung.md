@@ -1,7 +1,7 @@
 # D-027: SkytechHEMS schreibt über eine eigene Rolle und verwaltet seine Sensoren selbst
 
 - **Datum:** 12.10.2026
-- **Status:** Geplant
+- **Status:** Aktiv (Data-Insight-Seite umgesetzt am 12.10.2026; SkytechHEMS-Seite offen)
 - **Betrifft:** künftig `app/sql/` (Migration), `rootfs/usr/share/skytech/` (Rolle, `pg_hba`),
   `config.yaml` (Option `hems_password`), `app/access_service.py` (Zugang `hems`),
   `app/sensor_service.py`, `app/mcp_tools.py`, Seiten „Sensoren“ und „Zugänge“; Schnittstelle:
@@ -35,10 +35,15 @@ nur noch über das HEMS verwaltet werden.
 
 Option B, ausgestaltet im
 [Vertrag mit SkytechHEMS](../../contract/contract_hems_data_insight/contract_hems_data_insight.md)
-(Version 0.1, Entwurf). Kernpunkte:
+(Version 0.2). Kernpunkte:
 
-- Rolle `skytech_hems`, nur im internen Add-on-Netz, Secret über die Seite „Zugänge“
-  (Schlüssel `hems`, Option `hems_password`).
+- Rolle `skytech_hems`, nur aus dem Add-on-Bereich `172.30.33.0/24`, Secret über die Seite
+  „Zugänge“ (Schlüssel `hems`, Option `hems_password`).
+- **Schreiben nur über Funktionen** (Vertrag 0.2, mit dem User am 12.10.2026 entschieden): Das HEMS
+  schreibt den Mittelwert eines Slots erst nach dessen Ende, datiert auf den Slot-Beginn; die
+  Minutenwerte sind dann schon gerechnet. Die Funktion meldet neue Werte per `NOTIFY`, der
+  Collector rechnet nach. Nebenbei prüfen die Funktionen jede Eingabe und schreiben das Protokoll;
+  die Rolle braucht keine Tabellenrechte.
 - Spalte `sensor.verwaltet_von`. Vom HEMS angelegte oder übernommene Sensoren sind per Trigger
   gegen Änderungen anderer Rollen gesperrt und in Oberfläche, API (`409`) und MCP gekennzeichnet.
 - `hems_zuordnung` (Rolle → Sensor mit Gültigkeitsbeginn) und Sichten je Rolle, damit ein

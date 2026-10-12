@@ -32,6 +32,7 @@ Energiedaten: **TimescaleDB** (PostgreSQL) für Leistungs-, Energie- und Soll/Is
 | Grafana im LAN | `http://<ha-adresse>:3000/` | Benutzer `admin`, Passwort aus der Konfiguration |
 | MCP für LLMs | `http://<ha-adresse>:8765/mcp` | Header `Authorization: Bearer <mcp_token>` – [Anleitung](docs/mcp.md) |
 | Datenbank im LAN | `<ha-adresse>:5432`, Datenbank `skytech` | `skytech_admin` bzw. `skytech_reader`, Passwort aus der Konfiguration – [Anleitung](docs/datenbankzugang.md) |
+| Skytech HEMS | nur intern im Add-on-Netz | `skytech_hems`, Passwort `hems_password` (Seite „Zugänge“) – [Vertrag](contract/contract_hems_data_insight/contract_hems_data_insight.md) |
 
 Ports werden im Abschnitt „Netzwerk" der Add-on-Seite freigegeben oder abgeschaltet.
 **Nie ins Internet freigeben.**

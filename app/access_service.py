@@ -1,4 +1,4 @@
-"""Zugänge im LAN: Status anzeigen, Secrets neu erzeugen oder sperren (D-025).
+"""Zugänge im LAN und für SkytechHEMS: Status anzeigen, Secrets neu erzeugen oder sperren (D-025, D-027).
 
 Gespeichert wird in den Add-on-Optionen über die Supervisor-API – dieselbe
 Quelle wie die Konfigurationsseite, damit es keine zweite Wahrheit gibt.
@@ -42,6 +42,8 @@ class Access:
     port: str
     user: str | None
     role: str | None = None
+    # Nur im internen Add-on-Netz erreichbar (kein LAN-Port), z. B. für SkytechHEMS.
+    internal: bool = False
 
 
 ACCESSES = (
@@ -49,6 +51,9 @@ ACCESSES = (
     Access("datenbank_lesen", "Datenbank – nur lesen", "db_readonly_password", "5432/tcp", "skytech_reader", "skytech_reader"),
     Access("grafana", "Grafana im LAN", "grafana_admin_password", "3000/tcp", "admin"),
     Access("mcp", "MCP-Server", "mcp_token", "8765/tcp", None),
+    # Vertrag contract_hems_data_insight: Anmeldung nur aus dem Add-on-Netz (pg_hba.conf).
+    Access("hems", "Skytech HEMS – Datenbank (intern)", "hems_password", "", "skytech_hems", "skytech_hems",
+           internal=True),
 )
 BY_KEY = {access.key: access for access in ACCESSES}
 
@@ -98,8 +103,8 @@ async def overview(supervisor: SupervisorClient) -> dict[str, Any]:
 
 def _describe(access: Access, configured: bool | None, host_port: Any) -> dict[str, Any]:
     return {"schluessel": access.key, "bezeichnung": access.label, "option": access.option,
-            "benutzer": access.user, "gesetzt": configured,
-            "port": host_port if isinstance(host_port, int) else None}
+            "benutzer": access.user, "gesetzt": configured, "intern": access.internal,
+            "port": host_port if isinstance(host_port, int) and not access.internal else None}
 
 
 async def change(supervisor: SupervisorClient, key: str, secret: str) -> None:
