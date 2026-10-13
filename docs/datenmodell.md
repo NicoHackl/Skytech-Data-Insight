@@ -63,7 +63,9 @@ Geschrieben wird nur bei echter Änderung. Primärschlüssel `(sensor_id, zeit)`
 
 ### `skytech.messwert_1min` — Minutenwerte (Hypertable, Chunks 30 Tage)
 
-Berechnet in `app/minute_values.py` (D-015): jeder Rohwert gilt, bis der nächste kommt.
+Berechnet in `app/minute_values.py` (D-015): jeder Rohwert gilt, bis der nächste kommt. Ausnahme
+Reihen mit `quelle = 'hems'`: ihr Rohwert gilt nur für seine Minute, Lücken bleiben Lücken
+(Vertrag 0.3).
 
 | Spalte | Bedeutung |
 |---|---|
@@ -116,7 +118,7 @@ WHERE kategorie = 'pv' AND groesse = 'energie'
 ORDER BY tag;
 ```
 
-## Anbindung von SkytechHEMS (Migration 0003, D-027)
+## Anbindung von SkytechHEMS (Migrationen 0003 und 0004, D-027)
 
 Für den dynamischen Strompreis schreibt SkytechHEMS über die Rolle `skytech_hems` – ausschließlich
 über die Funktionen `hems_sensor_sichern`, `hems_sensor_stilllegen`, `hems_zuordnen`,
@@ -126,7 +128,7 @@ Für den dynamischen Strompreis schreibt SkytechHEMS über die Rolle `skytech_he
 |---|---|
 | `sensor.verwaltet_von` | `hems` = vom HEMS angelegt oder übernommen; ein Trigger sperrt Änderungen und Löschen für alle anderen (SQLSTATE `SKY01`) |
 | `hems_zuordnung`, `v_hems_zuordnung` | HEMS-Rolle (z. B. `hausverbrauch`) → Sensor mit Gültigkeit; die erste Zuordnung gilt ab `-infinity` |
-| `v_hems_rolle_15min` | 15-min-Werte je Rolle, über Sensorwechsel hinweg |
+| `v_hems_rolle_1min`, `v_hems_rolle_15min` | Minuten- bzw. 15-min-Werte je Rolle, über Sensorwechsel hinweg (1min seit Migration 0004) |
 | `prognose_lauf`, `prognose_wert` (Hypertable) | Preis-, PV-, Verbrauchs- und Auswertungsläufe |
 | `v_prognose_aktuell`, `v_prognose_vortag`, `v_preis`, `v_prognose_vs_ist`, `v_prognose_guete_tag` | Prognosen, Endpreis, Prognose gegen Ist, Prognosegüte je Berliner Tag |
 | `v_hems_vertrag` | erfüllte Vertragsversion |

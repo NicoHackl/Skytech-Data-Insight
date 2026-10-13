@@ -49,8 +49,10 @@ Datenmodell (Details: Werkzeug schema_anzeigen):
 - Zeitstempel sind timestamptz in UTC. Für Menschen immer Europe/Berlin, Datum TT.MM.JJJJ.
 - SkytechHEMS (Vertrag contract_hems_data_insight): Sensoren mit verwaltet_von = 'hems' gehören dem
   HEMS und sind gesperrt – nicht ändern oder löschen, Änderungen nur im HEMS. skytech.hems_zuordnung
-  bzw. v_hems_zuordnung ordnet HEMS-Rollen (z. B. hausverbrauch) Sensoren zu, v_hems_rolle_15min
-  liefert 15-min-Werte je Rolle. Prognosen: prognose_lauf/prognose_wert, Sichten v_prognose_aktuell,
+  bzw. v_hems_zuordnung ordnet HEMS-Rollen (z. B. hausverbrauch) Sensoren zu, v_hems_rolle_1min und
+  v_hems_rolle_15min liefern Minuten- bzw. 15-min-Werte je Rolle. Eigene HEMS-Reihen (hems.*) kommen je
+  Minute und werden nicht fortgeführt: fehlt ein Wert, fehlt die Minute. Zählerrollen (*_energie) tragen
+  den Zuwachs in zuwachs. Prognosen: prognose_lauf/prognose_wert, Sichten v_prognose_aktuell,
   v_prognose_vortag, v_preis (€/kWh), v_prognose_vs_ist, v_prognose_guete_tag.
 
 Grafana:

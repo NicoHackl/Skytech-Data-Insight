@@ -8,6 +8,17 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Geändert — 13.10.2026 (Vertrag mit SkytechHEMS 0.3, Migration 0004)
+
+- Reihen mit Quelle `hems` werden nicht mehr fortgeführt: ein Rohwert gilt nur für seine Minute.
+  Unter 0.2 lief ein einziger Grundlast-Wert als Konstante weiter. Die Migration entfernt die
+  bisher fortgeführten Minuten dieser Reihen; die Verdichtungen ziehen über ihre Policy nach.
+- Neue Sicht `v_hems_rolle_1min` (Minutenwerte je HEMS-Rolle) für die Grundlast je Minute.
+- `hems_sensor_sichern` setzt zusätzlich das Zählerkennzeichen (`energie_zaehler`), damit Zähler
+  wie Netzbezug oder PV-Ertrag ihren Zuwachs je Minute bekommen.
+- Vertragsversion 0.3; SkytechHEMS im selben Arbeitspaket nachgezogen. Beide Add-ons zusammen
+  aktualisieren.
+
 ### Hinzugefügt — 13.10.2026 (Dashboard „Skytech Dynamischer Strompreis“)
 
 - Neues Grafana-Dashboard für den dynamischen Strompreis (SkytechHEMS-Phase P6), über den

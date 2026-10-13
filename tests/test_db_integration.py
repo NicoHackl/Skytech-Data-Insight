@@ -65,7 +65,7 @@ async def pools():
     collector_pool = await _pool("skytech_collector")
     async with app_pool.acquire() as connection:
         applied = await migration_runner.migrate(connection, migration_runner.discover(site_dir=Path("/nonexistent")))
-        assert [m.version for m in applied] == [1, 2, 3]
+        assert [m.version for m in applied] == [1, 2, 3, 4]
         assert await connection.fetchval("SELECT bezeichnung FROM skytech.groesse WHERE schluessel = 'preis'") == "Preis"
     yield app_pool, collector_pool
     await collector_pool.close()
@@ -427,7 +427,7 @@ async def test_migration_overview_states(pools, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# SkytechHEMS (D-027, Vertrag contract_hems_data_insight 0.2)
+# SkytechHEMS (D-027, Vertrag contract_hems_data_insight 0.3)
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(loop_scope="module")
@@ -440,15 +440,16 @@ async def hems(clean):
 
 
 async def _sichern(connection, entity_id, quelle="ha", name=None, kategorie="verbraucher", groesse="leistung",
-                   einheit="W", attribut=None):
+                   einheit="W", attribut=None, zaehler=False):
     return await connection.fetchval(
-        "SELECT skytech.hems_sensor_sichern($1, $2, $3, $4, $5, $6, $7)",
-        entity_id, attribut, name or entity_id, kategorie, groesse, einheit, quelle)
+        "SELECT skytech.hems_sensor_sichern($1, $2, $3, $4, $5, $6, $7, $8)",
+        entity_id, attribut, name or entity_id, kategorie, groesse, einheit, quelle, zaehler)
 
 
 async def test_hems_role_only_reads_and_calls_functions(clean, hems):
     async with hems.acquire() as connection:
-        assert await connection.fetchval("SELECT version FROM skytech.v_hems_vertrag") == "0.2"
+        assert await connection.fetchval("SELECT version FROM skytech.v_hems_vertrag") == "0.3"
+        assert await connection.fetchval("SELECT count(*) FROM skytech.v_hems_rolle_1min") == 0
         assert await connection.fetchval("SELECT count(*) FROM skytech.v_messwert_15min") == 0
         for statement in (
             "INSERT INTO skytech.sensor (entity_id, name, kategorie, groesse) VALUES ('sensor.x', 'x', 'pv', 'leistung')",
@@ -649,3 +650,72 @@ async def test_hems_runs_views_and_cleanup(clean, hems):
         remaining = [row["art"] for row in await connection.fetch("SELECT art FROM skytech.prognose_lauf ORDER BY id")]
         assert remaining == ["preis"]
         assert await connection.fetchval("SELECT count(*) FROM skytech.prognose_wert") == 2
+
+
+async def test_hems_series_are_not_carried_forward(clean, hems):
+    app_pool, collector_pool = clean
+    async with hems.acquire() as connection:
+        series = await _sichern(connection, "hems.grundlast_w", quelle="hems")
+        await connection.execute("SELECT skytech.hems_zuordnen('grundlast', $1)", series)
+        ha_sensor = await _sichern(connection, "sensor.haus")
+    start = minute_values.floor_minute(datetime.now(timezone.utc)) - timedelta(minutes=30)
+    async with hems.acquire() as connection:
+        await connection.execute("SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", series,
+                                 [start, start + timedelta(minutes=3)], [400.0, 700.0])
+    async with app_pool.acquire() as connection:
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 500, NULL)", start, ha_sensor)
+    async with collector_pool.acquire() as connection:
+        await minute_values.compute(connection, start, start + timedelta(minutes=6), [series, ha_sensor])
+    async with hems.acquire() as connection:
+        rows = await connection.fetch(
+            "SELECT zeit, mittel, anzahl, abdeckung_s FROM skytech.v_hems_rolle_1min WHERE rolle = 'grundlast' "
+            "ORDER BY zeit")
+    # Nur die beiden Minuten mit Rohwert, jeweils voll abgedeckt – keine Fortführung dazwischen.
+    assert [(row["zeit"], row["mittel"], row["anzahl"], row["abdeckung_s"]) for row in rows] == [
+        (start, 400.0, 1, 60.0), (start + timedelta(minutes=3), 700.0, 1, 60.0)]
+    async with app_pool.acquire() as connection:
+        # Home-Assistant-Sensoren führen ihren letzten Wert weiter fort.
+        assert await connection.fetchval(
+            "SELECT count(*) FROM skytech.messwert_1min WHERE sensor_id = $1", ha_sensor) == 6
+
+
+async def test_hems_counter_roles_and_cleanup_of_carried_minutes(clean, hems):
+    app_pool, collector_pool = clean
+    async with hems.acquire() as connection:
+        counter = await _sichern(connection, "sensor.netz_bezug_energie", kategorie="netz", groesse="energie",
+                                 einheit="kWh", zaehler=True)
+        await connection.execute("SELECT skytech.hems_zuordnen('netz_bezug_energie', $1)", counter)
+        with pytest.raises(asyncpg.PostgresError, match="keine Zähler"):
+            await _sichern(connection, "hems.zaehler", quelle="hems", zaehler=True)
+    start = minute_values.floor_minute(datetime.now(timezone.utc)) - timedelta(minutes=10)
+    async with app_pool.acquire() as connection:
+        assert await connection.fetchval("SELECT energie_zaehler FROM skytech.sensor WHERE id = $1", counter)
+        await connection.execute(
+            "INSERT INTO skytech.messwert VALUES ($1, $3, 100.0, NULL), ($2, $3, 100.5, NULL)",
+            start, start + timedelta(minutes=1, seconds=30), counter)
+    async with collector_pool.acquire() as connection:
+        await minute_values.compute(connection, start, start + timedelta(minutes=3), [counter])
+    async with hems.acquire() as connection:
+        growth = await connection.fetch(
+            "SELECT zeit, zuwachs FROM skytech.v_hems_rolle_1min WHERE rolle = 'netz_bezug_energie' ORDER BY zeit")
+    assert [row["zuwachs"] for row in growth] == [0.0, 0.5, 0.0]
+    # Später zum Nicht-Zähler gemacht: das Kennzeichen folgt der Funktion.
+    async with hems.acquire() as connection:
+        await _sichern(connection, "sensor.netz_bezug_energie", kategorie="netz", groesse="energie", einheit="kWh")
+    async with app_pool.acquire() as connection:
+        assert await connection.fetchval("SELECT energie_zaehler FROM skytech.sensor WHERE id = $1", counter) is False
+
+    # Bereinigung aus 0004: fortgeführte Minuten (anzahl = 0) einer HEMS-Reihe entfallen, echte bleiben.
+    async with hems.acquire() as connection:
+        series = await _sichern(connection, "hems.nutzbar_kwh", quelle="hems", kategorie="speicher",
+                                groesse="energie", einheit="kWh")
+    async with app_pool.acquire() as connection:
+        await connection.execute(
+            "INSERT INTO skytech.messwert_1min (zeit, sensor_id, mittel, minimum, maximum, letzter, anzahl, abdeckung_s) "
+            "VALUES ($1, $3, 5, 5, 5, 5, 1, 60), ($2, $3, 5, 5, 5, 5, 0, 60)",
+            start, start + timedelta(minutes=1), series)
+        sql = (migration_runner.SYSTEM_DIR / "0004_hems_minuten.sql").read_text(encoding="utf-8")
+        cleanup = sql[sql.index("DELETE FROM skytech.messwert_1min"):sql.index("AND m.anzahl = 0;") + len("AND m.anzahl = 0;")]
+        await connection.execute(cleanup)
+        assert await connection.fetchval(
+            "SELECT array_agg(anzahl ORDER BY zeit) FROM skytech.messwert_1min WHERE sensor_id = $1", series) == [1]

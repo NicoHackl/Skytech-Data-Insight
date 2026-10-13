@@ -59,6 +59,10 @@ Option B, ausgestaltet im
   das HEMS sonst mit Sensoren rechnet, die jemand anders geändert hat.
 - **Aufwand:** Migration, Rolle und `pg_hba`, Zugang `hems`, Sperre in Oberfläche, API und MCP,
   Tests gegen den TimescaleDB-Testcontainer.
+- **Nachtrag 13.10.2026 (Vertrag 0.3, Migration 0004):** HEMS-Reihen werden nicht mehr
+  fortgeführt – ein einmal geschriebener Grundlast-Wert lief sonst als Konstante weiter, und das
+  HEMS hielt die Reihe für aktuell. Das HEMS schreibt seither je Minute; dazu kamen die Sicht
+  `v_hems_rolle_1min` und das Zählerkennzeichen für Rollen wie Netzbezug oder PV-Ertrag.
 
 ## Rücknahmebedingung
 

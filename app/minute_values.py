@@ -6,6 +6,10 @@ zehnmal, eine Stunde ohne Änderung einmal. Gerechnet wird darum zeitgewichtet
 mit „letzter Wert gilt fort": jeder Rohwert gilt, bis der nächste kommt. Der
 Wert vor Beginn des Fensters (Anker) setzt die erste Minute fort.
 
+Ausnahme: Reihen mit quelle = 'hems' schreibt SkytechHEMS je Minute selbst
+(Vertrag contract_hems_data_insight 0.3). Ihr Rohwert gilt nur für seine
+Minute; fehlt er, bleibt die Minute leer statt einen alten Wert fortzuführen.
+
 Die Berechnung ist ein einziges SQL-Statement und wiederholbar: dieselben
 Rohwerte ergeben dieselben Minutenwerte (Upsert). Nachgeladene oder verspätete
 Rohwerte werden durch Neuberechnen des betroffenen Fensters eingearbeitet.
@@ -22,10 +26,10 @@ MAX_WINDOW = timedelta(days=1)
 # $1 = Fensterbeginn, $2 = Fensterende (beide auf volle Minuten), $3 = Sensor-IDs
 MINUTE_VALUES_SQL = """
 WITH sensoren AS (
-    SELECT id, energie_zaehler FROM skytech.sensor WHERE id = ANY($3::integer[])
+    SELECT id, energie_zaehler, quelle = 'hems' AS je_minute FROM skytech.sensor WHERE id = ANY($3::integer[])
 ),
 anker AS (
-    -- Letzter Rohwert vor dem Fenster: gilt fort bis zur ersten Änderung.
+    -- Letzter Rohwert vor dem Fenster: gilt fort bis zur ersten Änderung (nicht für HEMS-Reihen).
     SELECT s.id AS sensor_id, $1::timestamptz AS zeit, a.wert, true AS ist_anker
     FROM sensoren s
     CROSS JOIN LATERAL (
@@ -33,6 +37,7 @@ anker AS (
         WHERE m.sensor_id = s.id AND m.zeit < $1
         ORDER BY m.zeit DESC LIMIT 1
     ) a
+    WHERE NOT s.je_minute
 ),
 punkte AS (
     SELECT sensor_id, zeit, wert, ist_anker FROM anker
@@ -42,9 +47,17 @@ punkte AS (
     WHERE m.sensor_id = ANY($3::integer[]) AND m.zeit >= $1 AND m.zeit < $2
 ),
 segmente AS (
-    SELECT sensor_id, zeit AS beginn, wert, ist_anker,
-           lead(zeit, 1, $2::timestamptz) OVER (PARTITION BY sensor_id ORDER BY zeit, ist_anker DESC) AS ende
-    FROM punkte
+    -- HEMS-Reihen: ein Rohwert gilt höchstens bis zum Ende seiner Minute.
+    SELECT p.sensor_id, p.zeit AS beginn, p.wert, p.ist_anker,
+           CASE WHEN s.je_minute
+                THEN least(p.naechster, date_trunc('minute', p.zeit) + interval '1 minute')
+                ELSE p.naechster END AS ende
+    FROM (
+        SELECT sensor_id, zeit, wert, ist_anker,
+               lead(zeit, 1, $2::timestamptz) OVER (PARTITION BY sensor_id ORDER BY zeit, ist_anker DESC) AS naechster
+        FROM punkte
+    ) p
+    JOIN sensoren s ON s.id = p.sensor_id
 ),
 stuecke AS (
     -- Jedes Segment auf die Minuten verteilen, die es überdeckt.

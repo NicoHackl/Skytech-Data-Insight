@@ -80,7 +80,7 @@ Wenn `docs/` dieser Datei widerspricht, ist `docs/` falsch und wird korrigiert �
 12. **Projektübergreifende Verträge:** Die gemeinsame Ablagestruktur steht in
    [`contract/`](contract/README.md). Mit **SkytechHEMS** besteht der Vertrag
    [`contract_hems_data_insight`](contract/contract_hems_data_insight/contract_hems_data_insight.md)
-   (Version 0.2, D-027). Wer Rolle `skytech_hems`, verwaltete Sensoren, Rollen-Zuordnung oder
+   (Version 0.3, D-027). Wer Rolle `skytech_hems`, verwaltete Sensoren, Rollen-Zuordnung oder
    Prognosetabellen ändert, liest zuerst `contract/README.md` und den Vertrag und zieht **beide
    Kopien** (dieses Repo und SkytechHEMS, gleicher relativer Pfad, wortgleich) im **selben
    Arbeitspaket** nach, samt Changelog-Eintrag in beiden Repos. Die übrigen HTTP-/MCP- und

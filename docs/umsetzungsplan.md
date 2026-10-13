@@ -157,8 +157,8 @@ und optional VSCode), `skytech_collector` (nur INSERT auf `messwert`), später `
   Rollen-Zuordnung austauschen kann, ohne dass die Historie abreißt. Dazu kommen Tabellen für
   Prognose- und Preisläufe und eigene `hems.*`-Messreihen. Schnittstelle:
   [Vertrag mit SkytechHEMS](../contract/contract_hems_data_insight/contract_hems_data_insight.md)
-  (Version 0.2, D-027). Hier umgesetzt am 12.10.2026 (Migration 0003); das HEMS schreibt nur
-  über geprüfte Funktionen.
+  (Version 0.3, D-027). Hier umgesetzt am 12.10.2026 (Migration 0003), Version 0.3 am 13.10.2026
+  (Migration 0004); das HEMS schreibt nur über geprüfte Funktionen.
 
 ## Migrationen
 
