@@ -65,7 +65,7 @@ async def pools():
     collector_pool = await _pool("skytech_collector")
     async with app_pool.acquire() as connection:
         applied = await migration_runner.migrate(connection, migration_runner.discover(site_dir=Path("/nonexistent")))
-        assert [m.version for m in applied] == [1, 2, 3, 4]
+        assert [m.version for m in applied] == [1, 2, 3, 4, 5]
         assert await connection.fetchval("SELECT bezeichnung FROM skytech.groesse WHERE schluessel = 'preis'") == "Preis"
     yield app_pool, collector_pool
     await collector_pool.close()
@@ -745,3 +745,142 @@ async def test_hems_counter_roles_and_cleanup_of_carried_minutes(clean, hems):
             "SELECT array_agg(anzahl ORDER BY zeit) FROM skytech.messwert_1min WHERE sensor_id = $1", series) == [1]
         assert await connection.fetchval(
             "SELECT count(*) FROM skytech.messwert_1min WHERE sensor_id = $1", other) == 50
+
+
+# ---------------------------------------------------------------------------
+# Robustheit bei Neustarts (13.10.2026)
+# ---------------------------------------------------------------------------
+
+async def test_backfill_in_small_windows_retries_and_keeps_older_values(clean, unused_tcp_port, monkeypatch):
+    import collector as collector_module
+
+    monkeypatch.setattr(collector_module, "BACKFILL_RETRY_S", (0.05,))
+    app_pool, collector_pool = clean
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    old = now - timedelta(hours=3)
+    async with app_pool.acquire() as connection:
+        power = await _sensor(connection, "sensor.pv_leistung")
+        quiet = await _sensor(connection, "sensor.heizluefter", kategorie="verbraucher")
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 100, NULL)", old, power)
+        # Seit Tagen unverändert: darf den Beginn der Lücke nicht nach vorn ziehen (0.7.1).
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 0, NULL)",
+                                 now - timedelta(days=3), quiet)
+    history = [{"s": str(100 + i), "a": {}, "lu": (old + timedelta(minutes=10 * i)).timestamp()} for i in range(1, 18)]
+    ha = FakeHomeAssistant(
+        states=[{"entity_id": "sensor.pv_leistung", "state": "999", "attributes": {},
+                 "last_changed": now.isoformat(), "last_updated": now.isoformat()}],
+        history={"sensor.pv_leistung": history})
+    ha.fail_history = 1                                    # erster Versuch: HA trennt die Verbindung
+    await ha.start(unused_tcp_port)
+    collector = Collector(app_pool, collector_pool)
+    await collector.start()
+    client = HAClient(ha.url, "geheim", collector.on_state_changed, collector.on_connected)
+    collector.ha = client
+    task = asyncio.create_task(client.run())
+
+    async def done():
+        async with app_pool.acquire() as connection:
+            return await connection.fetchval(
+                "SELECT count(*) FROM skytech_config.nachlade_luecke WHERE erledigt_am IS NULL") == 0 and \
+                await connection.fetchval("SELECT count(*) FROM skytech.messwert WHERE sensor_id = $1", power) == 19
+
+    try:
+        await _wait_for(done, timeout=15)
+        async with app_pool.acquire() as connection:
+            values = [row["wert"] for row in await connection.fetch(
+                "SELECT wert FROM skytech.messwert WHERE sensor_id = $1 ORDER BY zeit", power)]
+            gaps = await connection.fetch("SELECT von, bis, erledigt_am FROM skytech_config.nachlade_luecke")
+        # Alte Werte landen trotz des schon aufgenommenen aktuellen Zustands (999).
+        assert values == [100.0] + [100.0 + i for i in range(1, 18)] + [999.0]
+        # Lücke beginnt beim jüngsten Rohwert aller Sensoren, nicht beim ältesten.
+        assert min(gap["von"] for gap in gaps) >= old
+        windows = [c for c in ha.commands if c["type"] == "history/history_during_period"]
+        assert all(datetime.fromisoformat(c["end_time"]) - datetime.fromisoformat(c["start_time"])
+                   <= timedelta(hours=1) for c in windows)
+        assert all(c["no_attributes"] for c in windows) and all(len(c["entity_ids"]) <= 5 for c in windows)
+        assert collector.backfill_status is None
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await collector.stop()
+        await ha.stop()
+
+
+async def test_open_gap_survives_restart(clean, unused_tcp_port):
+    app_pool, collector_pool = clean
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    async with app_pool.acquire() as connection:
+        power = await _sensor(connection, "sensor.pv_leistung")
+        await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 1, NULL)", now - timedelta(seconds=2),
+                                 power)
+        # Von einem früheren Lauf offen geblieben, zur Hälfte geladen.
+        await connection.execute(
+            "INSERT INTO skytech_config.nachlade_luecke (von, bis, versuche, letzter_fehler) VALUES ($1, $2, 2, 'x')",
+            now - timedelta(hours=2), now - timedelta(hours=1))
+    ha = FakeHomeAssistant(history={"sensor.pv_leistung": [
+        {"s": "50", "a": {}, "lu": (now - timedelta(minutes=90)).timestamp()}]})
+    await ha.start(unused_tcp_port)
+    collector = Collector(app_pool, collector_pool)
+    await collector.start()
+    client = HAClient(ha.url, "geheim", collector.on_state_changed, collector.on_connected)
+    collector.ha = client
+    task = asyncio.create_task(client.run())
+
+    async def loaded():
+        async with app_pool.acquire() as connection:
+            return await connection.fetchval(
+                "SELECT count(*) FROM skytech.messwert WHERE sensor_id = $1 AND wert = 50", power) == 1
+
+    try:
+        await _wait_for(loaded, timeout=10)
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+        await collector.stop()
+        await ha.stop()
+
+
+async def test_hems_values_without_notify_get_minutes_on_start(clean, hems):
+    app_pool, collector_pool = clean
+    async with hems.acquire() as connection:
+        series = await _sichern(connection, "hems.grundlast_w", quelle="hems")
+    minute = minute_values.floor_minute(datetime.now(timezone.utc)) - timedelta(minutes=20)
+    collector = Collector(app_pool, collector_pool)
+    await collector.start()
+    try:
+        # Geschrieben, während niemand zuhört (wie im Neustart-Fenster): direkt, ohne NOTIFY.
+        async with app_pool.acquire() as connection:
+            await connection.execute("INSERT INTO skytech.messwert VALUES ($1, $2, 750, NULL)", minute, series)
+        await collector.recheck_hems_series(datetime.now(timezone.utc))
+        await collector.compute_minutes(datetime.now(timezone.utc))
+        async with app_pool.acquire() as connection:
+            row = await connection.fetchrow(
+                "SELECT mittel, anzahl FROM skytech.messwert_1min WHERE sensor_id = $1 AND zeit = $2", series, minute)
+        assert row is not None and row["mittel"] == 750.0 and row["anzahl"] == 1
+    finally:
+        await collector.stop()
+
+
+async def test_recording_starts_despite_failed_migration(clean, tmp_path, monkeypatch):
+    import main
+
+    app_pool, collector_pool = clean
+    site = tmp_path / "anlage"
+    site.mkdir()
+    (site / "1000_kaputt.sql").write_text("SELECT gibt_es_nicht();", encoding="utf-8")
+    original = migration_runner.discover
+    monkeypatch.setattr(migration_runner, "discover", lambda *a, **k: original(site_dir=site))
+    service = main.AdminService("", "test", start_backend=False)
+
+    async def pools():
+        service.app_pool, service.collector_pool = app_pool, collector_pool
+
+    monkeypatch.setattr(service, "_connect_pools", pools)
+    monkeypatch.setattr(main, "connection_settings", lambda: None)
+    await service._start_backend_services()
+    try:
+        assert service.collector is not None and "1000_kaputt" in service.startup_error
+        state = await service._collector_health()
+        assert state.is_ok is False and "läuft mit dem bisherigen Schema" in state.detail
+    finally:
+        await service.collector.stop()

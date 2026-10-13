@@ -211,8 +211,12 @@ class HAClient:
         finally:
             self._pending.pop(message_id, None)
 
-    async def history(self, entity_ids: list[str], start: datetime, end: datetime) -> dict[str, list[dict]]:
-        """Verlauf ab `start` (inklusive des dann gültigen Zustands), normalisiert."""
+    async def history(self, entity_ids: list[str], start: datetime, end: datetime,
+                      no_attributes: bool = False) -> dict[str, list[dict]]:
+        """Verlauf ab `start` (inklusive des dann gültigen Zustands), normalisiert.
+
+        `no_attributes` hält die Antwort klein; nur Sensoren auf ein Attribut brauchen sie.
+        """
         result = await self.call(
             "history/history_during_period",
             start_time=start.isoformat(),
@@ -221,6 +225,6 @@ class HAClient:
             include_start_time_state=True,
             significant_changes_only=False,
             minimal_response=False,
-            no_attributes=False,
+            no_attributes=no_attributes,
         )
         return {entity_id: normalize_history(entries) for entity_id, entries in (result or {}).items()}

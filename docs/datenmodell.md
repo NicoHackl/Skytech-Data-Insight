@@ -145,6 +145,7 @@ rechnet er nach, sobald das HEMS Werte schreibt.
 | `einstellung` | Schlüssel/Wert (JSON) mit Beschreibung, z. B. Aufbewahrung |
 | `migration` | angewendete Migrationen: Nummer, Name, Quelle (`system`/`anlage`), Prüfsumme |
 | `aenderungsprotokoll` | Änderungen über Oberfläche, MCP, System und SkytechHEMS (`ui`, `mcp`, `system`, `hems`): Zeit, Quelle, Benutzer, Aktion, Details |
+| `nachlade_luecke` | Zeiträume ohne Aufzeichnung (Neustart von Data Insight oder HA), die der Collector aus dem HA-Verlauf nachlädt: `von` (rückt mit dem Fortschritt vor), `bis`, `erledigt_am`, `versuche`, `letzter_fehler` (Migration 0005) |
 
 ## Migrationen
 

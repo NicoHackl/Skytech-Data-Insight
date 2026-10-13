@@ -24,6 +24,41 @@ sie und führt jede SQL-Abfrage der Dashboards unter `grafana/dashboards/` mit d
 `skytech_reader` aus (Grafana-Makros und Variablen durch feste Werte ersetzt). Ohne
 `SKYTECH_TEST_DSN` läuft nur die Strukturprüfung.
 
+Neustarts (seit 13.10.2026): Nachladen in Fenstern ≤ 1 h und Gruppen ≤ 5 ohne Attribute, erster
+Versuch mit Verbindungsabbruch und Wiederholung, ältere Werte landen trotz schon aufgenommenem
+aktuellem Zustand, offene Lücke über einen Neustart hinweg, HEMS-Rohwerte ohne Meldung bekommen
+beim Start Minutenwerte, Aufzeichnung startet trotz gescheiterter Migration.
+
+## Migrationen gegen eine Sicherung der echten Datenbank (Pflicht vor Release)
+
+Leere Testdatenbanken zeigen keine Probleme mit Datenmengen oder Kompression – Migration 0004
+scheiterte am 13.10.2026 erst an der Referenzanlage an komprimierten Chunks. Deshalb vor jedem
+Release mit einer neuen Migration:
+
+1. Auf der Seite „Sicherungen“ eine aktuelle Sicherung erstellen und herunterladen (`.dump`).
+2. In den Testcontainer (dieselbe TimescaleDB-Version) einspielen:
+
+   ```bash
+   docker cp skytech.dump tsdb-test:/tmp/skytech.dump
+   docker exec tsdb-test psql -U postgres -c "DROP DATABASE IF EXISTS skytech_kopie WITH (FORCE)" \
+     -c "CREATE DATABASE skytech_kopie OWNER skytech_app"
+   docker exec tsdb-test psql -U postgres -d skytech_kopie -c "CREATE EXTENSION IF NOT EXISTS timescaledb" \
+     -c "SELECT timescaledb_pre_restore()"
+   docker exec tsdb-test pg_restore -U postgres -d skytech_kopie /tmp/skytech.dump
+   docker exec tsdb-test psql -U postgres -d skytech_kopie -c "SELECT timescaledb_post_restore()"
+   ```
+
+   Wie im Add-on (`restore-db.sh`) als `postgres` und mit Eigentümern – mit `--role=skytech_app`
+   fehlen die Rechte auf den TimescaleDB-Katalog, und die Messwerte fehlen danach. Die Rollen
+   (`skytech_app`, `skytech_collector`, `skytech_reader`, `skytech_hems`, `skytech_grafana`, …)
+   müssen existieren; die Integrationstests legen sie an, sonst vorher `CREATE ROLE … LOGIN`.
+   Danach prüfen: `skytech_config.migration`, Zahl der Roh- und Minutenwerte, komprimierte Chunks.
+3. Die neuen Migrationen als `skytech_app` mit `migration_runner.migrate` darauf laufen lassen und
+   die Dauer notieren; neue Abfragen des Collectors ebenso einmal ausführen. Scheitert etwas, wird
+   nicht veröffentlicht. Erstmals so geprüft am 13.10.2026 (Migration 0005: 0,01 s auf
+   2,6 Mio. Rohwerten mit 2 komprimierten Chunks).
+4. Datenbank `skytech_kopie` und die Sicherung danach löschen; sie enthalten echte Messwerte.
+
 ## Lokaler Containertest (amd64)
 
 Auf einem Mac mit Apple-Chip läuft der amd64-Container über Rosetta in Colima:

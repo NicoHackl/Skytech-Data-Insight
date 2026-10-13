@@ -119,9 +119,16 @@ class AdminService:
             await self._connect_pools()
             assert self.app_pool is not None and self.collector_pool is not None
             async with self.app_pool.acquire() as connection:
-                applied = await migration_runner.migrate(connection, migration_runner.discover())
-                if applied:
-                    log.info("%d Migration(en) angewendet.", len(applied))
+                try:
+                    applied = await migration_runner.migrate(connection, migration_runner.discover())
+                    if applied:
+                        log.info("%d Migration(en) angewendet.", len(applied))
+                except migration_runner.MigrationError as exc:
+                    # Eine gescheiterte Migration ist zurückgerollt: Das Schema steht auf dem alten
+                    # Stand, und damit läuft die Aufzeichnung weiter. Bis 0.7.1 stand sie dann still
+                    # (Referenzanlage 13.10.2026: 18 Minuten ohne Werte).
+                    self.startup_error = str(exc)
+                    log.error("Migration fehlgeschlagen, Aufzeichnung läuft mit dem bisherigen Schema: %s", exc)
                 await connection.execute("SELECT skytech_config.aufbewahrung_anwenden()")
                 await self._log_finished_restore(connection)
             self.collector = Collector(self.app_pool, self.collector_pool)
@@ -169,6 +176,9 @@ class AdminService:
         return web.FileResponse(index, headers={"Cache-Control": "no-cache"})
 
     async def _collector_health(self) -> health.ServiceHealth:
+        if self.startup_error and self.collector is not None and "Migration" in self.startup_error:
+            return health.ServiceHealth("collector", "Aufzeichnung", False,
+                                        f"Aufzeichnung läuft mit dem bisherigen Schema – {self.startup_error}")
         if self.startup_error:
             return health.ServiceHealth("collector", "Aufzeichnung", False, self.startup_error)
         if self.collector is None:
@@ -185,10 +195,10 @@ class AdminService:
         if minutes_until is not None and self.collector.minutes_lagging(datetime.now(timezone.utc)):
             return health.ServiceHealth("collector", "Aufzeichnung", False,
                                         f"Minutenwerte stehen seit {format_berlin(minutes_until)}")
-        return health.ServiceHealth(
-            "collector", "Aufzeichnung", True,
-            f"{len(self.collector.active_sensor_ids)} Sensoren · {self.collector.values_last_minute()} Werte/min",
-        )
+        text = f"{len(self.collector.active_sensor_ids)} Sensoren · {self.collector.values_last_minute()} Werte/min"
+        if self.collector.backfill_status:
+            text += f" · {self.collector.backfill_status}"
+        return health.ServiceHealth("collector", "Aufzeichnung", True, text)
 
     async def handle_status(self, _request: web.Request) -> web.Response:
         session = self._session

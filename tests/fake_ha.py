@@ -1,6 +1,7 @@
 """Nachbau der HA-WebSocket-API für Tests: Anmeldung, get_states, Abo, Verlauf."""
 
 import asyncio
+from datetime import datetime
 
 from aiohttp import web
 
@@ -10,6 +11,8 @@ class FakeHomeAssistant:
         self.token = token
         self.states = states or []
         self.history = history or {}
+        # So viele Verlaufsabfragen beantwortet HA mit Verbindungsabbruch (wie bei zu großer Antwort).
+        self.fail_history = 0
         self.connections: list[web.WebSocketResponse] = []
         self.commands: list[dict] = []
         self.subscription_id = None
@@ -73,7 +76,14 @@ class FakeHomeAssistant:
                 self.subscription_id = command["id"]
                 result = None
             elif kind == "history/history_during_period":
-                result = {e: self.history.get(e, []) for e in command["entity_ids"]}
+                if self.fail_history > 0:
+                    self.fail_history -= 1
+                    await websocket.close()
+                    break
+                start = datetime.fromisoformat(command["start_time"]).timestamp()
+                end = datetime.fromisoformat(command["end_time"]).timestamp()
+                result = {e: [entry for entry in self.history.get(e, []) if start <= entry["lu"] <= end]
+                          for e in command["entity_ids"]}
             else:
                 await websocket.send_json({"id": command["id"], "type": "result", "success": False,
                                            "error": {"code": "unknown_command", "message": "Unbekannt"}})

@@ -66,6 +66,8 @@ werden nur `MINOR` und `MAJOR`.
 
 ## Release
 
+0. Enthält das Release eine neue Migration: sie gegen eine Sicherung der echten Datenbank testen
+   ([test-strategie.md](test-strategie.md#migrationen-gegen-eine-sicherung-der-echten-datenbank-pflicht-vor-release))
 1. Bei neuer Funktion oder brechender Änderung: `MINOR` bzw. `MAJOR` in `config.yaml` anheben
 2. `CHANGELOG.md`: Abschnitt `Unreleased` in die neue Versionsnummer mit Datum (`TT.MM.JJJJ`)
    umbenennen

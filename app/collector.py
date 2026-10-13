@@ -8,15 +8,21 @@ Ablauf:
    Werte weg (mit Warnung).
 3. Jede Minute werden die Minutenwerte der abgeschlossenen Minute(n) berechnet
    (app/minute_values.py). Verspätete Werte lösen eine Neuberechnung aus.
-4. Nach jeder (Neu-)Verbindung zu HA: aktuellen Zustand abgleichen und die Lücke
-   seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen.
+4. Nach jeder (Neu-)Verbindung zu HA: aktuellen Zustand übernehmen und die Zeit
+   seit dem letzten gespeicherten Wert als Lücke in skytech_config.nachlade_luecke
+   eintragen. Eine Hintergrundschleife lädt offene Lücken in kleinen Stücken
+   (höchstens 1 h, höchstens 5 Entitäten je Aufruf) aus dem HA-Verlauf nach und
+   versucht es bei Fehlern mit wachsender Wartezeit erneut – auch nach einem
+   weiteren Neustart, weil der Stand in der Datenbank steht.
 
 Änderungen an der Sensorliste (Oberfläche oder SQL) kommen per LISTEN/NOTIFY.
 
 Sensoren mit `quelle = 'hems'` schreibt SkytechHEMS selbst (Vertrag
 contract_hems_data_insight). Für sie holt der Collector nichts aus HA; neue
 Werte meldet die Datenbankfunktion per NOTIFY `skytech_hems_werte`, damit die
-Minutenwerte ab dem frühesten neuen Zeitpunkt neu gerechnet werden.
+Minutenwerte ab dem frühesten neuen Zeitpunkt neu gerechnet werden. Weil eine
+Meldung während eines Neustarts verloren geht, gleicht der Collector beim Start
+und alle 15 min selbst ab: Rohwerte ohne Minutenwert werden nachgerechnet.
 """
 
 import asyncio
@@ -30,6 +36,7 @@ from typing import Any
 import asyncpg
 
 import minute_values
+from display_time import format_berlin
 from ha_client import HAClient, HAError, parse_timestamp
 from values import StoredValue, convert
 
@@ -44,6 +51,26 @@ MINUTE_DELAY_S = 5.0
 MAX_BACKFILL = timedelta(days=10)
 # Verspätete Live-Werte lösen höchstens so weit zurück eine Neuberechnung aus.
 MAX_LATE_RECOMPUTE = timedelta(hours=1)
+# Nachladen: kleine Stücke, damit HA die Antwort nicht verwirft (0.7.1: ein Aufruf
+# über Tage mit Attributen → „Verbindung getrennt“).
+BACKFILL_WINDOW = timedelta(hours=1)
+BACKFILL_GROUP = 5
+BACKFILL_RETRY_S = (30.0, 60.0, 120.0, 300.0, 600.0)
+BACKFILL_IDLE_S = 60.0
+# Kürzere Ausfälle sind keine Lücke (normale Ruhe zwischen zwei Werten).
+GAP_MIN = timedelta(seconds=5)
+# Abgleich der HEMS-Reihen ohne Meldung.
+HEMS_RECHECK = timedelta(minutes=15)
+
+_HEMS_WITHOUT_MINUTES_SQL = """
+SELECT m.sensor_id, min(m.zeit) AS ab
+FROM skytech.messwert m
+JOIN skytech.sensor s ON s.id = m.sensor_id AND s.quelle = 'hems' AND s.aktiv
+WHERE m.zeit >= $1 AND m.zeit < $2
+  AND NOT EXISTS (SELECT 1 FROM skytech.messwert_1min x
+                  WHERE x.sensor_id = m.sensor_id AND x.zeit = date_trunc('minute', m.zeit) AND x.anzahl > 0)
+GROUP BY m.sensor_id
+"""
 
 _INSERT_SQL = """
 INSERT INTO skytech.messwert (zeit, sensor_id, wert, text_wert)
@@ -103,6 +130,10 @@ class Collector:
         # Getrennt von last_error: ein erfolgreiches Schreiben der Rohwerte darf
         # einen Fehler der Minutenberechnung nicht überdecken.
         self.minute_error: str | None = None
+        # Offene Lücke mit Fehlversuchen – erscheint in der Kachel „Aufzeichnung“.
+        self.backfill_status: str | None = None
+        self._backfill_wakeup = asyncio.Event()
+        self._last_hems_recheck: datetime | None = None
         self.dropped = 0
 
     # ------------------------------------------------------------------
@@ -116,9 +147,11 @@ class Collector:
         self._listener_connection = await self._app_pool.acquire()
         await self._listener_connection.add_listener("skytech_sensor", self._on_notify)
         await self._listener_connection.add_listener("skytech_hems_werte", self._on_hems_values)
+        await self.recheck_hems_series(datetime.now(timezone.utc))
         self._tasks = [
             asyncio.create_task(self._flush_loop(), name="collector-flush"),
             asyncio.create_task(self._minute_loop(), name="collector-minute"),
+            asyncio.create_task(self._backfill_loop(), name="collector-backfill"),
         ]
         for task in self._tasks:
             task.add_done_callback(self._task_ended)
@@ -243,8 +276,9 @@ class Collector:
         if is_live and self._watermark is not None and moment < self._watermark:
             self._mark_late(sensor.id, max(moment, self._watermark - MAX_LATE_RECOMPUTE))
 
-    def _append(self, reading: Reading) -> None:
-        self._last[reading.sensor_id] = (reading.time, reading.value)
+    def _append(self, reading: Reading, update_last: bool = True) -> None:
+        if update_last:
+            self._last[reading.sensor_id] = (reading.time, reading.value)
         self._buffer.append(reading)
         if len(self._buffer) > MAX_BUFFER:
             self._buffer.popleft()
@@ -331,6 +365,9 @@ class Collector:
             try:
                 await self.flush()
                 await self.compute_minutes(datetime.now(timezone.utc))
+                now = datetime.now(timezone.utc)
+                if self._last_hems_recheck is None or now - self._last_hems_recheck >= HEMS_RECHECK:
+                    await self.recheck_hems_series(now)
                 self.minute_error = None
             except Exception as exc:  # noqa: BLE001 – eine Ausnahme beendete sonst die Schleife still (0.4.1)
                 self.minute_error = f"Minutenwerte fehlgeschlagen: {exc or type(exc).__name__}"
@@ -356,48 +393,145 @@ class Collector:
     # ------------------------------------------------------------------
 
     async def on_connected(self) -> None:
-        """Aktuellen Zustand übernehmen und die Lücke seit dem letzten Wert nachladen."""
+        """Aktuellen Zustand übernehmen; die Zeit seit dem letzten Wert als Lücke eintragen.
+
+        Nachgeladen wird im Hintergrund (`_backfill_loop`) – der Start wartet nicht darauf.
+        """
         assert self.ha is not None
         now = datetime.now(timezone.utc)
-        gaps: dict[str, datetime] = {}
-        for sensor_id in self.ha_sensor_ids:
-            sensor = self._sensors[sensor_id]
-            last = self._last.get(sensor_id)
-            if last is not None and now - last[0] > timedelta(seconds=5):
-                start = max(last[0], now - MAX_BACKFILL)
-                gaps[sensor.entity_id] = min(start, gaps.get(sensor.entity_id, start))
-        if gaps:
-            await self.backfill(gaps, now)
-        # Danach den aktuellen Zustand – bei neuen Sensoren der erste Wert.
+        ha_ids = set(self.ha_sensor_ids)
+        latest = max((moment for sensor_id, (moment, _) in self._last.items() if sensor_id in ha_ids), default=None)
+        if latest is not None and now - latest > GAP_MIN:
+            await self.open_gap(max(latest, now - MAX_BACKFILL), now)
         for sensor_id in self.ha_sensor_ids:
             sensor = self._sensors[sensor_id]
             state = self.ha.states.get(sensor.entity_id)
             if state is not None:
                 self._record(sensor, state, is_live=False)
         await self.flush()
+        self._backfill_wakeup.set()
 
-    async def backfill(self, gaps: dict[str, datetime], end: datetime) -> None:
-        """Lädt den HA-Verlauf je Entität ab dem angegebenen Zeitpunkt nach."""
-        assert self.ha is not None
-        start = min(gaps.values())
-        try:
-            history = await self.ha.history(sorted(gaps), start, end)
-        except HAError as exc:
-            log.warning("Nachladen aus dem HA-Verlauf fehlgeschlagen: %s", exc)
+    async def open_gap(self, start: datetime, end: datetime) -> None:
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "INSERT INTO skytech_config.nachlade_luecke (von, bis) VALUES ($1, $2)", start, end)
+        log.info("Lücke %s bis %s wird aus dem HA-Verlauf nachgeladen.", format_berlin(start), format_berlin(end))
+
+    # ------------------------------------------------------------------
+    # Nachladen aus dem HA-Verlauf
+    # ------------------------------------------------------------------
+
+    async def _backfill_loop(self) -> None:
+        failures = 0
+        while True:
+            try:
+                await self.process_gaps()
+                failures = 0
+                wait = BACKFILL_IDLE_S
+            except (HAError, asyncpg.PostgresError, OSError, asyncio.TimeoutError) as exc:
+                wait = BACKFILL_RETRY_S[min(failures, len(BACKFILL_RETRY_S) - 1)]
+                failures += 1
+                log.warning("Nachladen aus dem HA-Verlauf fehlgeschlagen (%s) – neuer Versuch in %d s.", exc, wait)
+            except Exception:  # noqa: BLE001 – die Schleife darf nie still enden
+                wait = BACKFILL_RETRY_S[-1]
+                log.exception("Nachladen aus dem HA-Verlauf fehlgeschlagen.")
+            self._backfill_wakeup.clear()
+            try:
+                await asyncio.wait_for(self._backfill_wakeup.wait(), wait)
+            except asyncio.TimeoutError:
+                pass
+
+    async def process_gaps(self) -> None:
+        """Arbeitet alle offenen Lücken ab; wirft bei einem Fehler, der Stand bleibt gespeichert."""
+        if self.ha is None or not self.ha.connected:
             return
+        now = datetime.now(timezone.utc)
+        async with self._pool.acquire() as connection:
+            gaps = await connection.fetch(
+                "SELECT id, von, bis, versuche FROM skytech_config.nachlade_luecke "
+                "WHERE erledigt_am IS NULL ORDER BY von")
+        for gap in gaps:
+            if gap["bis"] <= now - MAX_BACKFILL:
+                await self._finish_gap(gap["id"], "zu alt – HA hält den Verlauf höchstens 10 Tage")
+                continue
+            try:
+                await self._load_gap(gap["id"], max(gap["von"], now - MAX_BACKFILL), gap["bis"])
+            except (HAError, asyncpg.PostgresError, OSError, asyncio.TimeoutError) as exc:
+                async with self._pool.acquire() as connection:
+                    await connection.execute(
+                        "UPDATE skytech_config.nachlade_luecke SET versuche = versuche + 1, letzter_fehler = $2 "
+                        "WHERE id = $1", gap["id"], str(exc)[:500])
+                self.backfill_status = (f"Nachladen offen seit {format_berlin(gap['von'])} "
+                                        f"({gap['versuche'] + 1} Versuche): {exc}")
+                raise
+        self.backfill_status = None
+
+    async def _load_gap(self, gap_id: int, start: datetime, end: datetime) -> None:
+        sensors = [self._sensors[sensor_id] for sensor_id in self.ha_sensor_ids]
+        plain = sorted({s.entity_id for s in sensors} - {s.entity_id for s in sensors if s.attribute})
+        with_attributes = sorted({s.entity_id for s in sensors if s.attribute})
+        groups = ([(plain[i:i + BACKFILL_GROUP], True) for i in range(0, len(plain), BACKFILL_GROUP)]
+                  + [(with_attributes[i:i + BACKFILL_GROUP], False)
+                     for i in range(0, len(with_attributes), BACKFILL_GROUP)])
         loaded = 0
-        for entity_id, states in history.items():
-            for sensor in self._by_entity.get(entity_id, ()):
-                for state in states:
-                    before = self._last.get(sensor.id)
-                    self._record(sensor, state, is_live=False)
-                    if self._last.get(sensor.id) is not before:
-                        loaded += 1
-                # Die Minutenwerte ab Beginn der Lücke neu rechnen – auch die
-                # Minuten vor dem ersten nachgeladenen Wert waren bisher offen.
-                gap_start = gaps[entity_id]
-                if self._watermark is not None and gap_start < self._watermark:
-                    self._mark_late(sensor.id, gap_start)
-        if loaded:
-            log.info("%d Werte aus dem HA-Verlauf nachgeladen.", loaded)
-        await self.flush()
+        window_start = start
+        try:
+            while window_start < end:
+                window_end = min(window_start + BACKFILL_WINDOW, end)
+                for entity_ids, no_attributes in groups:
+                    history = await self.ha.history(entity_ids, window_start, window_end, no_attributes=no_attributes)
+                    for entity_id, states in history.items():
+                        for sensor in self._by_entity.get(entity_id, ()):
+                            loaded += self._store_history(sensor, states, window_start)
+                await self.flush()
+                if window_end < end:
+                    # Fortschritt sichern; das letzte Fenster schließt die Lücke unten ab.
+                    async with self._pool.acquire() as connection:
+                        await connection.execute(
+                            "UPDATE skytech_config.nachlade_luecke SET von = $2 WHERE id = $1", gap_id, window_end)
+                window_start = window_end
+        finally:
+            # Die Minutenwerte ab Lückenbeginn neu rechnen – auch bei Abbruch für das schon Geladene.
+            if window_start > start and self._watermark is not None:
+                for sensor in sensors:
+                    if start < self._watermark:
+                        self._mark_late(sensor.id, start)
+        await self._finish_gap(gap_id, None)
+        log.info("Lücke ab %s nachgeladen: %d Werte.", format_berlin(start), loaded)
+
+    async def _finish_gap(self, gap_id: int, reason: str | None) -> None:
+        async with self._pool.acquire() as connection:
+            await connection.execute(
+                "UPDATE skytech_config.nachlade_luecke SET erledigt_am = now(), "
+                "letzter_fehler = coalesce($2, letzter_fehler) WHERE id = $1", gap_id, reason)
+
+    def _store_history(self, sensor: SensorConfig, states: list[dict[str, Any]], after: datetime) -> int:
+        """Historische Werte direkt in den Puffer – an `_record` vorbei, der alles vor dem
+        letzten Live-Wert verwirft. Der mitgelieferte Startzustand (bis `after`) ist schon
+        gespeichert: Die Lücke beginnt beim letzten Rohwert, die Fenster schließen aneinander
+        an. Doppelte Zeitpunkte verwirft die Datenbank."""
+        previous: StoredValue | None = None
+        stored = 0
+        for state in states:
+            moment, value = extract(sensor, state)
+            if moment is None or moment <= after or value == previous:
+                continue
+            previous = value
+            self._append(Reading(moment, sensor.id, value), update_last=False)
+            stored += 1
+        return stored
+
+    # ------------------------------------------------------------------
+    # HEMS-Reihen ohne Meldung
+    # ------------------------------------------------------------------
+
+    async def recheck_hems_series(self, now: datetime) -> None:
+        """HEMS-Rohwerte der letzten 10 Tage ohne Minutenwert nachrechnen (verlorene Meldung)."""
+        self._last_hems_recheck = now
+        async with self._pool.acquire() as connection:
+            rows = await connection.fetch(_HEMS_WITHOUT_MINUTES_SQL, now - MAX_BACKFILL,
+                                          self._watermark or minute_values.floor_minute(now))
+        for row in rows:
+            self.mark_hems_values(row["sensor_id"], row["ab"])
+        if rows:
+            log.info("%d HEMS-Reihe(n) ohne Minutenwerte – werden nachgerechnet.", len(rows))

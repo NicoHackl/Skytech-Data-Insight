@@ -69,9 +69,16 @@ Versionen sind im [`Dockerfile`](../Dockerfile) gepinnt.
 ### Ablauf der Aufzeichnung
 
 1. Beim Start: Migrationen, `aufbewahrung_anwenden()`, Sensorliste und letzter Wert je Sensor laden.
-2. Nach jeder (Neu-)Verbindung zu HA: Zustandsabbild holen, `state_changed` abonnieren, die Lücke
-   seit dem letzten gespeicherten Wert aus dem HA-Verlauf nachladen (höchstens 10 Tage, begrenzt durch die Aufbewahrung des HA-Recorders), dann den
-   aktuellen Zustand übernehmen.
+   Scheitert eine Migration, ist sie zurückgerollt; die Aufzeichnung startet trotzdem mit dem
+   bisherigen Schema, die Kachel „Aufzeichnung“ nennt den Fehler. HEMS-Rohwerte ohne Minutenwert
+   (verlorene Meldung während eines Neustarts) werden beim Start und alle 15 min nachgerechnet.
+2. Nach jeder (Neu-)Verbindung zu HA: Zustandsabbild holen, `state_changed` abonnieren, den
+   aktuellen Zustand übernehmen und die Zeit seit dem jüngsten gespeicherten Rohwert als Lücke in
+   `skytech_config.nachlade_luecke` eintragen. Eine Hintergrundschleife lädt offene Lücken aus dem
+   HA-Verlauf nach – in Fenstern von höchstens 1 h, je Aufruf höchstens 5 Entitäten, ohne Attribute,
+   wo keine gebraucht werden – und versucht es bei Fehlern nach 30 s, 1, 2, 5 und dann alle 10 min
+   erneut. Der Stand steht in der Datenbank und überlebt Neustarts (höchstens 10 Tage zurück,
+   begrenzt durch die Aufbewahrung des HA-Recorders).
 3. Je Zustandswechsel: Wert je betroffenem Sensor umsetzen, nur bei Änderung puffern.
 4. Alle 2 s (und vor jeder Minutenberechnung): Puffer gebündelt schreiben – gesperrt, der Puffer wird dabei ausgetauscht. Datenbank weg → Werte kommen zurück in den Puffer (höchstens 100 000).
 5. Jede Minute (5 s nach Minutenwechsel): Minutenwerte der abgeschlossenen Minuten berechnen;

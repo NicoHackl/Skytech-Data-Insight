@@ -8,6 +8,22 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Behoben — 13.10.2026 (Stabil bei Updates und Neustarts)
+
+- **Nachladen aus dem HA-Verlauf scheiterte** nach jedem Neustart („Verbindung zu Home Assistant
+  getrennt“) und wurde nie wiederholt: Ein einziger Aufruf holte alle Sensoren ab dem ältesten
+  letzten Wert – bei einem seit Tagen unveränderten Sensor also Tage an Verlauf samt Attributen.
+  Jetzt wird die Zeit seit dem jüngsten Rohwert als Lücke gespeichert (`nachlade_luecke`,
+  Migration 0005) und im Hintergrund in Fenstern von höchstens 1 h und je höchstens 5 Entitäten
+  nachgeladen, mit Wiederholung bei Fehlern – auch über einen weiteren Neustart hinweg.
+- **HEMS-Werte ohne Minutenwerte:** Schrieb SkytechHEMS während eines Neustarts, ging die Meldung
+  verloren. Jetzt gleicht der Collector beim Start und alle 15 min selbst ab.
+- **Gescheiterte Migration stoppte die Aufzeichnung:** Sie läuft jetzt mit dem bisherigen Schema
+  weiter; die Kachel „Aufzeichnung“ nennt den Fehler.
+- Neue Regel: Migrationen vor einem Release gegen eine Sicherung der echten Datenbank testen.
+- Vertrag `contract_hems_data_insight` 0.3 präzisiert (Abgleich ohne Meldung, Grundlast nur aus
+  echten Messungen); SkytechHEMS im selben Arbeitspaket nachgezogen.
+
 ### Behoben — 13.10.2026 (Migration 0004 scheiterte an komprimierten Daten)
 
 - Die Bereinigung in Migration 0004 brach an der Referenzanlage ab: „tuple decompression limit

@@ -59,8 +59,10 @@ async def test_connects_loads_states_subscribes_and_dispatches(fake_ha):
         assert received[0]["state"] == "6"
         assert client.states["sensor.pv"]["state"] == "6"
 
-        history = await client.history(["sensor.pv"], datetime.now(timezone.utc), datetime.now(timezone.utc))
+        history = await client.history(["sensor.pv"], datetime.fromtimestamp(1789990000.0, timezone.utc),
+                                       datetime.now(timezone.utc), no_attributes=True)
         assert history["sensor.pv"][0]["state"] == "4"
+        assert fake_ha.commands[-1]["no_attributes"] is True
     finally:
         task.cancel()
         await asyncio.gather(task, return_exceptions=True)
