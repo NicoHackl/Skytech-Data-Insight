@@ -1,7 +1,7 @@
 # D-027: SkytechHEMS schreibt über eine eigene Rolle und verwaltet seine Sensoren selbst
 
 - **Datum:** 12.10.2026
-- **Status:** Aktiv (Data-Insight-Seite umgesetzt am 12.10.2026; SkytechHEMS-Seite offen)
+- **Status:** Aktiv (Data-Insight-Seite umgesetzt am 12.10.2026, SkytechHEMS-Seite am 13.10.2026)
 - **Betrifft:** künftig `app/sql/` (Migration), `rootfs/usr/share/skytech/` (Rolle, `pg_hba`),
   `config.yaml` (Option `hems_password`), `app/access_service.py` (Zugang `hems`),
   `app/sensor_service.py`, `app/mcp_tools.py`, Seiten „Sensoren“ und „Zugänge“; Schnittstelle:

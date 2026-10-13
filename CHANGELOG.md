@@ -8,6 +8,12 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 13.10.2026 (HEMS-Seite des Vertrags)
+
+- Vertrag `contract_hems_data_insight` 0.2: Die SkytechHEMS-Seite ist umgesetzt (HEMS-Phase P4).
+  Status je Abschnitt, Implementierungsstellen, Vertragsübersicht, Roadmap M7, D-027 und L-015
+  nachgezogen. Wortgleich mit SkytechHEMS.
+
 ### Hinzugefügt — 12.10.2026 (Anbindung von Skytech HEMS, D-027)
 
 - **Skytech HEMS kann Daten schreiben.** Neuer Datenbankbenutzer `skytech_hems`, nur aus dem
