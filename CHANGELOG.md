@@ -8,6 +8,12 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 13.10.2026 (Vertrag vollständig umgesetzt)
+
+- Vertrag `contract_hems_data_insight` 0.2: SkytechHEMS belegt seit Phase P5 alle Rollen, Reihen und
+  Laufarten (Verbrauchsprognose, Auswertung, Schalter). Status und Implementierungsstellen
+  nachgezogen; wortgleich mit SkytechHEMS.
+
 ### Dokumentation — 13.10.2026 (HEMS-Seite des Vertrags)
 
 - Vertrag `contract_hems_data_insight` 0.2: Die SkytechHEMS-Seite ist umgesetzt (HEMS-Phase P4).
