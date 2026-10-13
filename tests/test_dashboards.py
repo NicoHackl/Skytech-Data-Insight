@@ -37,7 +37,8 @@ def _executable(sql: str) -> str:
     """Grafana-Makros und Variablen durch feste Werte ersetzen, wie es Grafana zur Laufzeit tut."""
     sql = re.sub(r"\$__timeFilter\(([^)]+)\)",
                  r"\1 BETWEEN now() - interval '1 day' AND now() + interval '1 day'", sql)
-    replacements = {"$netz_sensor": "1", "$netz_vorzeichen": "1", "$speicher_kwh": "10", "$wirkungsgrad": "0.85"}
+    replacements = {"$netz_sensor": "1", "$netz_vorzeichen": "1", "$speicher_kwh": "10", "$wirkungsgrad": "0.85",
+                    "$festpreis": "28"}
     for name, value in replacements.items():
         sql = sql.replace(name, value)
     assert not re.search(r"\$_*[A-Za-z]", sql), f"Unbekannte Variable oder Makro in: {sql[:120]}"

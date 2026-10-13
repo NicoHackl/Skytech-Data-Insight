@@ -8,7 +8,7 @@ Speichern aus dem Repo sie.
 
 | Datei | uid | Inhalt |
 |---|---|---|
-| `skytech-dynamischer-strompreis.json` | `skytech-dynamischer-strompreis` | Preis, PV- und Verbrauchsprognose gegen Ist, Speicher, Netzlade-Freigabe, Prognosegüte und Rückblick „ideales Netzladen gestern“ (SkytechHEMS D-065, Data Insight D-027) |
+| `skytech-dynamischer-strompreis.json` | `skytech-dynamischer-strompreis` | Preis, PV- und Verbrauchsprognose gegen Ist, Speicher, Netzlade-Freigabe, Prognosegüte und Rückblick „ideales Netzladen gestern“ samt Vergleich mit einem Festpreis (SkytechHEMS D-065, Data Insight D-027) |
 
 Regeln:
 

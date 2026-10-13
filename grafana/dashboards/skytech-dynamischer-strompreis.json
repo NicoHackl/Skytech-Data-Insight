@@ -181,6 +181,25 @@
         },
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "festpreis",
+        "label": "Festpreis (ct/kWh)",
+        "type": "textbox",
+        "hide": 0,
+        "query": "28",
+        "current": {
+          "text": "28",
+          "value": "28"
+        },
+        "options": [
+          {
+            "text": "28",
+            "value": "28",
+            "selected": true
+          }
+        ],
+        "description": "Arbeitspreis eines festen Tarifs zum Vergleich, brutto in ct/kWh. Grundgebühren bleiben unberücksichtigt."
       }
     ]
   },
@@ -1637,6 +1656,131 @@
             "matcher": {
               "id": "byName",
               "options": "Ersparnis"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "id": 25,
+      "title": "Dynamisch mit idealem Netzladen gegen Festpreis (gestern)",
+      "description": "Rückblick, nur Anzeige: derselbe Netzbezug von gestern wie oben, einmal zum Festpreis (Variable oben, ct/kWh), einmal dynamisch zu den Preisen des jeweiligen Slots und dynamisch mit idealem Netzladen (Rechnung wie im Panel darüber, also eine Obergrenze). Vorteil dynamisch = Festpreis-Kosten minus dynamische Kosten mit idealem Netzladen; negativ heißt, der Festpreis wäre günstiger gewesen. Nur Arbeitspreis, Grundgebühren bleiben unberücksichtigt.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH preise AS (\n  SELECT zeit, bis, preis_eur_kwh AS preis\n  FROM skytech.v_preis\n  WHERE zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin' - interval '1 hour'\n    AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT m.zeit, greatest(0, $netz_vorzeichen * m.mittel) * 0.25 / 1000 AS kwh, pr.preis\n  FROM skytech.messwert_15min m\n  JOIN preise pr ON m.zeit >= pr.zeit AND m.zeit < pr.bis\n  WHERE m.sensor_id = $netz_sensor\n    AND m.zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin'\n    AND m.zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), teuer AS (\n  SELECT kwh, preis, sum(kwh) OVER (ORDER BY preis DESC, zeit) AS kumuliert FROM slots\n), verschoben AS (\n  SELECT sum(least(kwh, greatest(0, $speicher_kwh - (kumuliert - kwh)))) AS kwh,\n         sum(least(kwh, greatest(0, $speicher_kwh - (kumuliert - kwh))) * preis) AS kosten\n  FROM teuer\n), billig AS (\n  SELECT min(preis) AS preis FROM preise\n  WHERE zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin'\n), fest AS (\n  SELECT replace('$festpreis', ',', '.')::numeric / 100 AS preis\n)\nSELECT (SELECT sum(kwh) FROM slots)                AS \"Netzbezug\",\n       (SELECT sum(kwh) FROM slots) * f.preis      AS \"Kosten Festpreis\",\n       (SELECT sum(kwh * preis) FROM slots)        AS \"Kosten dynamisch\",\n       (SELECT sum(kwh * preis) FROM slots) - greatest(0, v.kosten - v.kwh * b.preis / $wirkungsgrad)\n                                                   AS \"Kosten dynamisch ideal\",\n       (SELECT sum(kwh) FROM slots) * f.preis - (SELECT sum(kwh * preis) FROM slots)\n         + greatest(0, v.kosten - v.kwh * b.preis / $wirkungsgrad) AS \"Vorteil dynamisch\"\nFROM verschoben v, billig b, fest f"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Netzbezug"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatth"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten Festpreis"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten dynamisch"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Kosten dynamisch ideal"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Vorteil dynamisch"
             },
             "properties": [
               {

@@ -8,6 +8,14 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt — 13.10.2026 (Dashboard: Vergleich mit Festpreis)
+
+- Dashboard „Dynamischer Strompreis“: neues Panel „Dynamisch mit idealem Netzladen gegen
+  Festpreis (gestern)“. Es bewertet den Netzbezug von gestern zum Festpreis (neue Variable
+  „Festpreis (ct/kWh)“, Voreinstellung 28), dynamisch zu den Slotpreisen und dynamisch mit idealem
+  Netzladen. „Vorteil dynamisch“ ist negativ, wenn der Festpreis günstiger gewesen wäre. Nur
+  Arbeitspreis, ohne Grundgebühren. Das bestehende Panel bleibt unverändert.
+
 ### Behoben — 13.10.2026 (Stabil bei Updates und Neustarts)
 
 - **Nachladen aus dem HA-Verlauf scheiterte** nach jedem Neustart („Verbindung zu Home Assistant
