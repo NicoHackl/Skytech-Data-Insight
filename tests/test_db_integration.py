@@ -706,16 +706,42 @@ async def test_hems_counter_roles_and_cleanup_of_carried_minutes(clean, hems):
         assert await connection.fetchval("SELECT energie_zaehler FROM skytech.sensor WHERE id = $1", counter) is False
 
     # Bereinigung aus 0004: fortgeführte Minuten (anzahl = 0) einer HEMS-Reihe entfallen, echte bleiben.
+    # Wie an der Referenzanlage liegt ein älterer, komprimierter Chunk mit Werten anderer Sensoren
+    # daneben; die Bereinigung darf ihn nicht entpacken (Grenze hier 1 statt 100 000).
     async with hems.acquire() as connection:
         series = await _sichern(connection, "hems.nutzbar_kwh", quelle="hems", kategorie="speicher",
                                 groesse="energie", einheit="kWh")
+        await connection.execute("SELECT skytech.hems_messwerte_schreiben($1, $2, $3)", series, [start], [5.0])
+    old = start - timedelta(days=45)
     async with app_pool.acquire() as connection:
+        other = await _sensor(connection, "sensor.alt")
+        await connection.executemany(
+            "INSERT INTO skytech.messwert_1min (zeit, sensor_id, mittel, minimum, maximum, letzter, anzahl, abdeckung_s) "
+            "VALUES ($1, $2, 1, 1, 1, 1, 0, 60)", [(old + timedelta(minutes=i), other) for i in range(50)])
+        await connection.execute(
+            "SELECT compress_chunk(c) FROM show_chunks('skytech.messwert_1min', older_than => $1::timestamptz) c",
+            start - timedelta(days=1))
+        assert await connection.fetchval(
+            "SELECT count(*) FROM timescaledb_information.chunks WHERE hypertable_name = 'messwert_1min' "
+            "AND is_compressed AND range_end <= $1", start) >= 1
         await connection.execute(
             "INSERT INTO skytech.messwert_1min (zeit, sensor_id, mittel, minimum, maximum, letzter, anzahl, abdeckung_s) "
-            "VALUES ($1, $3, 5, 5, 5, 5, 1, 60), ($2, $3, 5, 5, 5, 5, 0, 60)",
+            "VALUES ($1, $3, 5, 5, 5, 5, 1, 60), ($2, $3, 5, 5, 5, 5, 0, 60) ON CONFLICT DO NOTHING",
             start, start + timedelta(minutes=1), series)
         sql = (migration_runner.SYSTEM_DIR / "0004_hems_minuten.sql").read_text(encoding="utf-8")
-        cleanup = sql[sql.index("DELETE FROM skytech.messwert_1min"):sql.index("AND m.anzahl = 0;") + len("AND m.anzahl = 0;")]
-        await connection.execute(cleanup)
+        cleanup = sql[sql.index("-- Bereinigung: Anfang"):sql.index("-- Bereinigung: Ende")]
+        # Das alte DELETE mit Join scheitert an der Grenze – so wie am 13.10.2026 an der Anlage.
+        async with connection.transaction():
+            await connection.execute("SET LOCAL timescaledb.max_tuples_decompressed_per_dml_transaction = 1")
+            with pytest.raises(asyncpg.PostgresError, match="decompression limit"):
+                async with connection.transaction():
+                    await connection.execute(
+                        "DELETE FROM skytech.messwert_1min m USING skytech.sensor s "
+                        "WHERE s.id = m.sensor_id AND s.quelle = 'hems' AND m.anzahl = 0")
+        async with connection.transaction():
+            await connection.execute("SET LOCAL timescaledb.max_tuples_decompressed_per_dml_transaction = 1")
+            await connection.execute(cleanup)
         assert await connection.fetchval(
             "SELECT array_agg(anzahl ORDER BY zeit) FROM skytech.messwert_1min WHERE sensor_id = $1", series) == [1]
+        assert await connection.fetchval(
+            "SELECT count(*) FROM skytech.messwert_1min WHERE sensor_id = $1", other) == 50

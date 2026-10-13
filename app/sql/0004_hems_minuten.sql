@@ -5,6 +5,10 @@
 --   genau für seine Minute (app/minute_values.py). Die bisher fortgeführten
 --   Minutenwerte (anzahl = 0) entfallen hier; die Verdichtungen ziehen über ihre
 --   Policy nach (30 Tage rückwirkend).
+--   Die Bereinigung filtert mit festen Sensor-IDs und festem Zeitbeginn: Ein
+--   DELETE mit Join ohne Zeitfilter entpackt alle komprimierten Chunks und
+--   scheitert an timescaledb.max_tuples_decompressed_per_dml_transaction
+--   (Referenzanlage 13.10.2026: 132 036 Zeilen bei Grenze 100 000).
 -- * Sicht v_hems_rolle_1min: Minutenwerte je Rolle, für die Grundlast je Minute.
 -- * hems_sensor_sichern setzt zusätzlich energie_zaehler (Zählerrollen).
 
@@ -12,9 +16,30 @@
 -- Fortgeführte Minutenwerte der HEMS-Reihen entfernen
 -- ---------------------------------------------------------------------------
 
-DELETE FROM skytech.messwert_1min m
-USING skytech.sensor s
-WHERE s.id = m.sensor_id AND s.quelle = 'hems' AND m.anzahl = 0;
+-- Bereinigung: Anfang
+DO $$
+DECLARE
+    v_sensoren integer[];
+    v_ab timestamptz;
+BEGIN
+    SELECT array_agg(id) INTO v_sensoren FROM skytech.sensor WHERE quelle = 'hems';
+    IF v_sensoren IS NULL THEN
+        RETURN;
+    END IF;
+    -- Fortgeführt wird erst ab dem ersten Rohwert einer Reihe.
+    SELECT date_trunc('minute', min(zeit)) INTO v_ab FROM skytech.messwert WHERE sensor_id = ANY(v_sensoren);
+    IF v_ab IS NULL THEN
+        RETURN;
+    END IF;
+    -- Nur für diese Transaktion: liegen HEMS-Minuten schon in komprimierten Chunks, dürfen deren
+    -- Segmente entpackt werden. Andere Chunks schließen die Literale unten aus.
+    PERFORM set_config('timescaledb.max_tuples_decompressed_per_dml_transaction', '0', true);
+    EXECUTE format(
+        'DELETE FROM skytech.messwert_1min WHERE sensor_id = ANY(%L::integer[]) AND zeit >= %L::timestamptz '
+        'AND anzahl = 0', v_sensoren, v_ab);
+END
+$$;
+-- Bereinigung: Ende
 
 -- ---------------------------------------------------------------------------
 -- Minutenwerte je Rolle

@@ -8,6 +8,15 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Behoben — 13.10.2026 (Migration 0004 scheiterte an komprimierten Daten)
+
+- Die Bereinigung in Migration 0004 brach an der Referenzanlage ab: „tuple decompression limit
+  exceeded“ (132 036 entpackte Zeilen, Grenze 100 000). Das `DELETE` hatte keinen Zeitfilter und
+  entpackte deshalb auch alte, komprimierte Chunks anderer Sensoren. Jetzt filtert es mit festen
+  Sensor-IDs und dem ersten Rohwert der HEMS-Reihen; alte Chunks bleiben unberührt. Die
+  gescheiterte Migration war vollständig zurückgerollt, Daten gingen nicht verloren. Test mit
+  komprimiertem Chunk ergänzt.
+
 ### Geändert — 13.10.2026 (Vertrag mit SkytechHEMS 0.3, Migration 0004)
 
 - Reihen mit Quelle `hems` werden nicht mehr fortgeführt: ein Rohwert gilt nur für seine Minute.
