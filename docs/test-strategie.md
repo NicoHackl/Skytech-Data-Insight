@@ -19,6 +19,11 @@ docker run -d --name tsdb-test -e POSTGRES_PASSWORD=test -p 15432:5432 timescale
 SKYTECH_TEST_DSN=postgresql://postgres:test@127.0.0.1:15432/postgres pytest -q
 ```
 
+`tests/test_dashboards.py` legt dabei eine eigene Datenbank `skytech_dashboard_test` an, migriert
+sie und führt jede SQL-Abfrage der Dashboards unter `grafana/dashboards/` mit der Rolle
+`skytech_reader` aus (Grafana-Makros und Variablen durch feste Werte ersetzt). Ohne
+`SKYTECH_TEST_DSN` läuft nur die Strukturprüfung.
+
 ## Lokaler Containertest (amd64)
 
 Auf einem Mac mit Apple-Chip läuft der amd64-Container über Rosetta in Colima:

@@ -8,6 +8,23 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Hinzugefügt — 13.10.2026 (Dashboard „Skytech Dynamischer Strompreis“)
+
+- Neues Grafana-Dashboard für den dynamischen Strompreis (SkytechHEMS-Phase P6), über den
+  MCP-Server gespeichert:
+  - Preiskurve mit Markierung „jetzt“ und Ende des Preishorizonts
+  - PV- und Grundlast-Prognose (aktuell und Vortag mit p10–p90-Band) gegen Ist
+  - PV je Tag: Helios-Vortagsprognose gegen Ist
+  - Ladezustand, nutzbare Energie und Reichweite der Speicher
+  - Netzlade-Schalter und -Zulässigkeit als Statusverlauf
+  - Prognosegüte mit den Abnahmekriterien
+  - Rückblick „Was hätte ideales Netzladen gestern gespart?“ (Netzbezug-Sensor wählbar)
+- Dashboards liegen versioniert unter `grafana/dashboards/`; `tests/test_dashboards.py` führt jede
+  Abfrage gegen ein frisch migriertes Schema mit der Leserolle aus.
+- Bekannte Lücke L-017: `v_prognose_vs_ist` und `v_prognose_guete_tag` reichen Zeitfilter nicht
+  durch; das Dashboard filtert deshalb jede Seite selbst. L-015 weitgehend bestätigt (Anbindung
+  läuft auf der Referenzanlage).
+
 ### Dokumentation — 13.10.2026 (Vertrag vollständig umgesetzt)
 
 - Vertrag `contract_hems_data_insight` 0.2: SkytechHEMS belegt seit Phase P5 alle Rollen, Reihen und

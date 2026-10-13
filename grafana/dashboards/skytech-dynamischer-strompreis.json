@@ -1,0 +1,1673 @@
+{
+  "uid": "skytech-dynamischer-strompreis",
+  "title": "Skytech Dynamischer Strompreis",
+  "description": "Preis, PV- und Verbrauchsprognose gegen Ist, Speicher, Netzlade-Freigabe und Prognosegüte (SkytechHEMS D-065, Data Insight D-027).",
+  "tags": [
+    "skytech",
+    "hems",
+    "dynamischer-strompreis"
+  ],
+  "timezone": "Europe/Berlin",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "5m",
+  "schemaVersion": 41,
+  "time": {
+    "from": "now-1d/d",
+    "to": "now+1d/d"
+  },
+  "timepicker": {},
+  "fiscalYearStartMonth": 0,
+  "weekStart": "monday",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "strompreis"
+      ],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": false,
+      "targetBlank": false,
+      "title": "Strompreis-Statistik",
+      "icon": "external link"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Jetzt",
+        "enable": true,
+        "iconColor": "red",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "skytech-db"
+        },
+        "target": {
+          "refId": "Anno",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS \"time\", 'jetzt' AS text"
+        }
+      },
+      {
+        "name": "Preishorizont",
+        "enable": true,
+        "iconColor": "#18BCF2",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "skytech-db"
+        },
+        "filter": {
+          "exclude": false,
+          "ids": [
+            3
+          ]
+        },
+        "target": {
+          "refId": "Anno",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT max(bis) AS \"time\", 'Preise bekannt bis' AS text FROM skytech.v_preis WHERE zeit > now() - interval '1 day'"
+        }
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "netz_sensor",
+        "label": "Netzbezug-Sensor",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "skytech-db"
+        },
+        "query": "SELECT name AS __text, id AS __value FROM skytech.sensor WHERE kategorie = 'netz' AND groesse = 'leistung' AND aktiv ORDER BY name",
+        "definition": "SELECT name AS __text, id AS __value FROM skytech.sensor WHERE kategorie = 'netz' AND groesse = 'leistung' AND aktiv ORDER BY name",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "hide": 0,
+        "sort": 0,
+        "current": {},
+        "options": [],
+        "description": "Leistungssensor am Netzanschlusspunkt für den Rückblick (Kategorie Netz, Größe Leistung)."
+      },
+      {
+        "name": "netz_vorzeichen",
+        "label": "Vorzeichen Netzbezug",
+        "type": "custom",
+        "hide": 0,
+        "query": "Bezug positiv : 1, Bezug negativ : -1",
+        "options": [
+          {
+            "text": "Bezug positiv",
+            "value": "1",
+            "selected": true
+          },
+          {
+            "text": "Bezug negativ",
+            "value": "-1",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "Bezug positiv",
+          "value": "1"
+        },
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "speicher_kwh",
+        "label": "Nutzbare Speicherenergie (kWh)",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "skytech-db"
+        },
+        "hide": 0,
+        "query": "SELECT coalesce(round(max(mittel)::numeric, 1), 0) FROM skytech.v_hems_rolle_15min WHERE rolle = 'nutzbar' AND zeit > now() - interval '14 days'",
+        "definition": "SELECT coalesce(round(max(mittel)::numeric, 1), 0) FROM skytech.v_hems_rolle_15min WHERE rolle = 'nutzbar' AND zeit > now() - interval '14 days'",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {},
+        "options": [],
+        "description": "Höchster Wert von hems.nutzbar_kwh der letzten 14 Tage."
+      },
+      {
+        "name": "wirkungsgrad",
+        "label": "Rundlauf-Wirkungsgrad",
+        "type": "custom",
+        "hide": 0,
+        "query": "0.85,0.8,0.9,0.95",
+        "options": [
+          {
+            "text": "0.85",
+            "value": "0.85",
+            "selected": true
+          },
+          {
+            "text": "0.8",
+            "value": "0.8",
+            "selected": false
+          },
+          {
+            "text": "0.9",
+            "value": "0.9",
+            "selected": false
+          },
+          {
+            "text": "0.95",
+            "value": "0.95",
+            "selected": false
+          }
+        ],
+        "current": {
+          "text": "0.85",
+          "value": "0.85"
+        },
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "id": 1,
+      "title": "",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Dynamischer Strompreis – Datenerhebung (SkytechHEMS D-065).** Preise, PV- und Verbrauchsprognose schreibt das HEMS über den Vertrag `contract_hems_data_insight`, Ist-Werte zeichnet Data Insight auf. Reine Beobachtung: das HEMS schaltet nichts danach. Abnahme für die Steuerung: mindestens 14 Tage Daten, Verbrauchsprognose (Vortag) im Mittel ±15 % der Tagesenergie, PV in mindestens 80 % der Tag-Slots im p10–p90-Band."
+      }
+    },
+    {
+      "type": "row",
+      "id": 2,
+      "title": "Preis",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 3,
+      "title": "Strompreis",
+      "description": "Endpreis aus dem jüngsten Preislauf je Slot (Vertrag: v_preis). Markierungen: jetzt und Ende des Preishorizonts.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 18,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT zeit AS \"time\", preis_eur_kwh * 100 AS \"Endpreis\"\nFROM skytech.v_preis\nWHERE $__timeFilter(zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ct/kWh",
+          "custom": {
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#18BCF2"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "id": 4,
+      "title": "Preis jetzt",
+      "description": "Aktueller Endpreis.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT preis_eur_kwh * 100 AS \"Preis jetzt\"\nFROM skytech.v_preis\nWHERE zeit > now() - interval '2 hours' AND zeit <= now() AND bis > now()"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ct/kWh",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 5,
+      "title": "Günstigster Slot ab jetzt",
+      "description": "Günstigster bekannter Slot im restlichen Preishorizont.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(zeit AT TIME ZONE 'Europe/Berlin', 'DD.MM. HH24:MI') || ' · ' ||\n       replace(to_char(preis_eur_kwh * 100, 'FM990.00'), '.', ',') || ' ct' AS \"Günstigster Slot\"\nFROM skytech.v_preis\nWHERE zeit > now() - interval '2 hours' AND bis > now()\nORDER BY preis_eur_kwh, zeit\nLIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 6,
+      "title": "Preise bekannt bis",
+      "description": "Ende des Preishorizonts. Die Preise für morgen kommen meist am frühen Nachmittag.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(max(bis) AT TIME ZONE 'Europe/Berlin', 'DD.MM.YYYY HH24:MI') AS \"Preise bis\"\nFROM skytech.v_preis\nWHERE zeit > now() - interval '1 day'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "row",
+      "id": 7,
+      "title": "PV",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 8,
+      "title": "PV: Prognose gegen Ist",
+      "description": "Mittlere Leistung je 15 min. Prognose aktuell = jüngster Lauf; Prognose Vortag = jüngster Lauf, der mindestens 24 h vor dem Slot erstellt wurde, mit p10–p90-Band. Ist = Rolle pv_ist.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
+        "y": 14
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT zeit, wert FROM skytech.v_prognose_aktuell WHERE art = 'pv' AND $__timeFilter(zeit)\n), v AS (\n  SELECT zeit, wert, p10, p90 FROM skytech.v_prognose_vortag WHERE art = 'pv' AND $__timeFilter(zeit)\n), i AS (\n  SELECT zeit, mittel FROM skytech.v_hems_rolle_15min WHERE rolle = 'pv_ist' AND $__timeFilter(zeit)\n)\nSELECT zeit AS \"time\",\n       a.wert   AS \"Prognose aktuell\",\n       v.wert   AS \"Prognose Vortag\",\n       v.p10    AS \"p10 Vortag\",\n       v.p90    AS \"p90 Vortag\",\n       i.mittel AS \"Ist\"\nFROM a FULL JOIN v USING (zeit) FULL JOIN i USING (zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p90 Vortag"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "p10 Vortag"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p10 Vortag"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prognose Vortag"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prognose aktuell"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ist"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 10
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "barchart",
+      "id": 9,
+      "title": "PV je Tag: Helios-Vortagsprognose gegen Ist",
+      "description": "Letzte 14 abgeschlossene Tage: Helios-Tagesprognose für morgen aus dem letzten PV-Lauf vor Mitternacht gegen die gemessene PV-Energie (Rolle pv_ist).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "timeFrom": "14d",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH tage AS (\n  SELECT generate_series(date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days', date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day', interval '1 day') AS lokal\n)\nSELECT to_char(t.lokal, 'DD.MM.') AS \"Tag\",\n       (SELECT (l.details ->> 'morgen_kwh')::double precision\n          FROM skytech.prognose_lauf l\n         WHERE l.art = 'pv' AND l.erstellt < t.lokal AT TIME ZONE 'Europe/Berlin'\n           AND l.erstellt >= (t.lokal - interval '1 day') AT TIME ZONE 'Europe/Berlin'\n         ORDER BY l.erstellt DESC LIMIT 1) AS \"Helios Vortag\",\n       (SELECT sum(r.mittel) * 0.25 / 1000\n          FROM skytech.v_hems_rolle_15min r\n         WHERE r.rolle = 'pv_ist'\n           AND r.zeit >= t.lokal AT TIME ZONE 'Europe/Berlin'\n           AND r.zeit < (t.lokal + interval '1 day') AT TIME ZONE 'Europe/Berlin') AS \"Ist\"\nFROM tage t\nORDER BY t.lokal"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Helios Vortag"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ist"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "xField": "Tag",
+        "orientation": "vertical",
+        "groupWidth": 0.7,
+        "barWidth": 0.9,
+        "showValue": "never",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 10,
+      "title": "Verbrauch (Grundlast)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 11,
+      "title": "Grundlast: Prognose gegen Ist",
+      "description": "Verbrauchsprognose profil_v1 des HEMS gegen die Grundlast (hems.grundlast_w = Hausverbrauch ohne HEMS-Verbraucher und eingerechnete Speicher). Prognosen gibt es ab 7 Tagen Grundlast-Historie.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH a AS (\n  SELECT zeit, wert FROM skytech.v_prognose_aktuell WHERE art = 'verbrauch' AND $__timeFilter(zeit)\n), v AS (\n  SELECT zeit, wert, p10, p90 FROM skytech.v_prognose_vortag WHERE art = 'verbrauch' AND $__timeFilter(zeit)\n), i AS (\n  SELECT zeit, mittel FROM skytech.v_hems_rolle_15min WHERE rolle = 'grundlast' AND $__timeFilter(zeit)\n)\nSELECT zeit AS \"time\",\n       a.wert   AS \"Prognose aktuell\",\n       v.wert   AS \"Prognose Vortag\",\n       v.p10    AS \"p10 Vortag\",\n       v.p90    AS \"p90 Vortag\",\n       i.mittel AS \"Ist\"\nFROM a FULL JOIN v USING (zeit) FULL JOIN i USING (zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "custom": {
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p90 Vortag"
+            },
+            "properties": [
+              {
+                "id": "custom.fillBelowTo",
+                "value": "p10 Vortag"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 18
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p10 Vortag"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prognose Vortag"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Prognose aktuell"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ist"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 10
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 12,
+      "title": "Speicher",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "id": 13,
+      "title": "Ladezustand",
+      "description": "SoC je Speicher (Rollen speicher_soc:<gerät>), 15-min-Mittel.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT r.zeit AS \"time\", regexp_replace(s.name, '^HEMS (.*) Ladezustand$', '\\1') AS metric, r.mittel AS value\nFROM skytech.v_hems_rolle_15min r\nJOIN skytech.sensor s ON s.id = r.sensor_id\nWHERE r.rolle LIKE 'speicher\\_soc:%' AND $__timeFilter(r.zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "id": 14,
+      "title": "Nutzbare Energie und Reichweite",
+      "description": "hems.nutzbar_kwh (über soc_min, nach Entladewirkungsgrad, alle Speicher) und hems.reichweite_h (erwartete Reichweite mit Verbrauchs- und PV-Prognose; fehlt, wenn sie über den Prognosehorizont reicht).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT zeit AS \"time\",\n       CASE rolle WHEN 'nutzbar' THEN 'Nutzbar' ELSE 'Reichweite' END AS metric,\n       mittel AS value\nFROM skytech.v_hems_rolle_15min\nWHERE rolle IN ('nutzbar', 'reichweite') AND $__timeFilter(zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "custom": {
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Reichweite"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "h"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nutzbar"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 15,
+      "title": "Netzladen (nur Anzeige)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "panels": []
+    },
+    {
+      "type": "state-timeline",
+      "id": 16,
+      "title": "Schalter und Netzlade-Freigabe",
+      "description": "HA-Helfer (schalter_*) und die vom HEMS berechnete Zulässigkeit (netzladen_zulaessig*). Das HEMS lädt derzeit nie aus dem Netz.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT r.zeit AS \"time\", regexp_replace(s.name, '^HEMS ', '') AS metric, r.mittel AS value\nFROM skytech.v_hems_rolle_15min r\nJOIN skytech.sensor s ON s.id = r.sensor_id\nWHERE (r.rolle LIKE 'schalter\\_netzladen%' OR r.rolle LIKE 'netzladen\\_zulaessig%') AND $__timeFilter(r.zeit)\nORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#8e8e8e",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0.4999,
+                "result": {
+                  "text": "aus"
+                }
+              }
+            },
+            {
+              "type": "range",
+              "options": {
+                "from": 0.5,
+                "to": 1,
+                "result": {
+                  "text": "an"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.8,
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "id": 17,
+      "title": "Prognosegüte",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 18,
+      "title": "Tage mit Verbrauchsvergleich",
+      "description": "Abgeschlossene Tage mit Vortagsprognose und Ist-Grundlast (letzte 30 Tage). Abnahme ab 14.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 51
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (\n  SELECT art, zeit, wert, p10, p90, ist_rolle FROM skytech.v_prognose_vortag\n  WHERE art IN ('pv', 'verbrauch') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '30 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), i AS (\n  SELECT rolle, zeit, mittel FROM skytech.v_hems_rolle_15min\n  WHERE rolle IN ('pv_ist', 'grundlast') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '30 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT v.art, v.zeit, v.wert, v.p10, v.p90, i.mittel AS ist\n  FROM v JOIN i ON i.rolle = v.ist_rolle AND i.zeit = v.zeit\n), tage AS (\n  SELECT date_trunc('day', zeit AT TIME ZONE 'Europe/Berlin') AS tag, art, count(*) AS slots,\n         sum(wert) * 0.25 / 1000 AS prognose_kwh,\n         sum(ist) * 0.25 / 1000 AS ist_kwh,\n         avg(abs(wert - ist)) AS fehler_w,\n         avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 1.0 ELSE 0.0 END)\n           FILTER (WHERE p10 IS NOT NULL AND p90 IS NOT NULL) AS im_band\n  FROM slots GROUP BY 1, 2\n)\nSELECT count(*) AS \"Tage\" FROM tage WHERE art = 'verbrauch'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 19,
+      "title": "Verbrauch: mittlerer Tagesfehler",
+      "description": "Mittel über die letzten 14 abgeschlossenen Tage von |Prognose Vortag − Ist| / Ist der Tagesenergie. Ziel: höchstens 15 %.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 51
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (\n  SELECT art, zeit, wert, p10, p90, ist_rolle FROM skytech.v_prognose_vortag\n  WHERE art IN ('pv', 'verbrauch') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), i AS (\n  SELECT rolle, zeit, mittel FROM skytech.v_hems_rolle_15min\n  WHERE rolle IN ('pv_ist', 'grundlast') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT v.art, v.zeit, v.wert, v.p10, v.p90, i.mittel AS ist\n  FROM v JOIN i ON i.rolle = v.ist_rolle AND i.zeit = v.zeit\n), tage AS (\n  SELECT date_trunc('day', zeit AT TIME ZONE 'Europe/Berlin') AS tag, art, count(*) AS slots,\n         sum(wert) * 0.25 / 1000 AS prognose_kwh,\n         sum(ist) * 0.25 / 1000 AS ist_kwh,\n         avg(abs(wert - ist)) AS fehler_w,\n         avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 1.0 ELSE 0.0 END)\n           FILTER (WHERE p10 IS NOT NULL AND p90 IS NOT NULL) AS im_band\n  FROM slots GROUP BY 1, 2\n)\nSELECT avg(abs(prognose_kwh - ist_kwh) / nullif(ist_kwh, 0)) * 100 AS \"Fehler\" FROM tage WHERE art = 'verbrauch'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 20,
+      "title": "PV: Tag-Slots im Band",
+      "description": "Anteil der Tag-Slots der letzten 14 abgeschlossenen Tage, in denen die PV-Ist-Leistung im p10–p90-Band der Vortagsprognose liegt. Nachtslots (Band 0 und Ist unter 50 W) zählen nicht. Ziel: mindestens 80 %.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 51
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (\n  SELECT art, zeit, wert, p10, p90, ist_rolle FROM skytech.v_prognose_vortag\n  WHERE art IN ('pv', 'verbrauch') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), i AS (\n  SELECT rolle, zeit, mittel FROM skytech.v_hems_rolle_15min\n  WHERE rolle IN ('pv_ist', 'grundlast') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT v.art, v.zeit, v.wert, v.p10, v.p90, i.mittel AS ist\n  FROM v JOIN i ON i.rolle = v.ist_rolle AND i.zeit = v.zeit\n), tage AS (\n  SELECT date_trunc('day', zeit AT TIME ZONE 'Europe/Berlin') AS tag, art, count(*) AS slots,\n         sum(wert) * 0.25 / 1000 AS prognose_kwh,\n         sum(ist) * 0.25 / 1000 AS ist_kwh,\n         avg(abs(wert - ist)) AS fehler_w,\n         avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 1.0 ELSE 0.0 END)\n           FILTER (WHERE p10 IS NOT NULL AND p90 IS NOT NULL) AS im_band\n  FROM slots GROUP BY 1, 2\n)\nSELECT avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 100.0 ELSE 0.0 END) AS \"Im Band\"\nFROM slots\nWHERE art = 'pv' AND p10 IS NOT NULL AND p90 IS NOT NULL AND (p90 > 0 OR ist > 50)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 80
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "stat",
+      "id": 21,
+      "title": "PV: mittlerer Tagesfehler",
+      "description": "Wie beim Verbrauch, für die PV-Kurve. Nur zur Einordnung, kein Abnahmekriterium.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 51
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (\n  SELECT art, zeit, wert, p10, p90, ist_rolle FROM skytech.v_prognose_vortag\n  WHERE art IN ('pv', 'verbrauch') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), i AS (\n  SELECT rolle, zeit, mittel FROM skytech.v_hems_rolle_15min\n  WHERE rolle IN ('pv_ist', 'grundlast') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '14 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT v.art, v.zeit, v.wert, v.p10, v.p90, i.mittel AS ist\n  FROM v JOIN i ON i.rolle = v.ist_rolle AND i.zeit = v.zeit\n), tage AS (\n  SELECT date_trunc('day', zeit AT TIME ZONE 'Europe/Berlin') AS tag, art, count(*) AS slots,\n         sum(wert) * 0.25 / 1000 AS prognose_kwh,\n         sum(ist) * 0.25 / 1000 AS ist_kwh,\n         avg(abs(wert - ist)) AS fehler_w,\n         avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 1.0 ELSE 0.0 END)\n           FILTER (WHERE p10 IS NOT NULL AND p90 IS NOT NULL) AS im_band\n  FROM slots GROUP BY 1, 2\n)\nSELECT avg(abs(prognose_kwh - ist_kwh) / nullif(ist_kwh, 0)) * 100 AS \"Fehler\" FROM tage WHERE art = 'pv'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "type": "table",
+      "id": 22,
+      "title": "Güte je Tag (Vortagsprognose gegen Ist)",
+      "description": "Letzte 30 abgeschlossene Tage, gerechnet wie v_prognose_guete_tag. Fehler % = (Prognose − Ist) / Ist der Tagesenergie. Im Band % zählt alle Slots inklusive Nacht.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH v AS (\n  SELECT art, zeit, wert, p10, p90, ist_rolle FROM skytech.v_prognose_vortag\n  WHERE art IN ('pv', 'verbrauch') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '30 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), i AS (\n  SELECT rolle, zeit, mittel FROM skytech.v_hems_rolle_15min\n  WHERE rolle IN ('pv_ist', 'grundlast') AND zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '30 days') AT TIME ZONE 'Europe/Berlin' AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT v.art, v.zeit, v.wert, v.p10, v.p90, i.mittel AS ist\n  FROM v JOIN i ON i.rolle = v.ist_rolle AND i.zeit = v.zeit\n), tage AS (\n  SELECT date_trunc('day', zeit AT TIME ZONE 'Europe/Berlin') AS tag, art, count(*) AS slots,\n         sum(wert) * 0.25 / 1000 AS prognose_kwh,\n         sum(ist) * 0.25 / 1000 AS ist_kwh,\n         avg(abs(wert - ist)) AS fehler_w,\n         avg(CASE WHEN ist BETWEEN p10 AND p90 THEN 1.0 ELSE 0.0 END)\n           FILTER (WHERE p10 IS NOT NULL AND p90 IS NOT NULL) AS im_band\n  FROM slots GROUP BY 1, 2\n)\nSELECT to_char(tag, 'DD.MM.YYYY') AS \"Tag\",\n       CASE art WHEN 'pv' THEN 'PV' ELSE 'Verbrauch' END AS \"Art\",\n       slots AS \"Slots\",\n       round(prognose_kwh::numeric, 1) AS \"Prognose kWh\",\n       round(ist_kwh::numeric, 1) AS \"Ist kWh\",\n       round(((prognose_kwh - ist_kwh) / nullif(ist_kwh, 0) * 100)::numeric, 1) AS \"Fehler %\",\n       round((im_band * 100)::numeric, 0) AS \"Im Band %\",\n       round(fehler_w::numeric, 0) AS \"Mittlerer Fehler W\"\nFROM tage\nORDER BY tag DESC, art"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Fehler %"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": -15,
+                      "to": 15,
+                      "result": {
+                        "color": "green"
+                      }
+                    }
+                  },
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": -100000,
+                      "to": -15.0001,
+                      "result": {
+                        "color": "red"
+                      }
+                    }
+                  },
+                  {
+                    "type": "range",
+                    "options": {
+                      "from": 15.0001,
+                      "to": 100000,
+                      "result": {
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "row",
+      "id": 23,
+      "title": "Rückblick: ideales Netzladen gestern",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "id": 24,
+      "title": "Was hätte ideales Netzladen gestern gespart?",
+      "description": "Rückblick, nur Anzeige: Netzbezug gestern (Sensor oben wählen) zu den Preisen des jeweiligen Slots. Ideal: Die teuersten Bezugs-kWh bis zur nutzbaren Speicherenergie wären im günstigsten Slot des Tages aus dem Netz geladen worden (Verlust über den Rundlauf-Wirkungsgrad). Ladeleistung und PV-Überschuss am Tag bleiben unberücksichtigt – eine Obergrenze.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "skytech-db"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "skytech-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH preise AS (\n  SELECT zeit, bis, preis_eur_kwh AS preis\n  FROM skytech.v_preis\n  WHERE zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin' - interval '1 hour'\n    AND zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), slots AS (\n  SELECT m.zeit, greatest(0, $netz_vorzeichen * m.mittel) * 0.25 / 1000 AS kwh, pr.preis\n  FROM skytech.messwert_15min m\n  JOIN preise pr ON m.zeit >= pr.zeit AND m.zeit < pr.bis\n  WHERE m.sensor_id = $netz_sensor\n    AND m.zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin'\n    AND m.zeit < date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') AT TIME ZONE 'Europe/Berlin'\n), teuer AS (\n  SELECT kwh, preis, sum(kwh) OVER (ORDER BY preis DESC, zeit) AS kumuliert FROM slots\n), verschoben AS (\n  SELECT sum(least(kwh, greatest(0, $speicher_kwh - (kumuliert - kwh)))) AS kwh,\n         sum(least(kwh, greatest(0, $speicher_kwh - (kumuliert - kwh))) * preis) AS kosten\n  FROM teuer\n), billig AS (\n  SELECT min(preis) AS preis FROM preise\n  WHERE zeit >= (date_trunc('day', now() AT TIME ZONE 'Europe/Berlin') - interval '1 day') AT TIME ZONE 'Europe/Berlin'\n)\nSELECT (SELECT sum(kwh) FROM slots)          AS \"Netzbezug\",\n       (SELECT sum(kwh * preis) FROM slots)  AS \"Bezugskosten\",\n       v.kwh                                 AS \"Verschiebbar\",\n       greatest(0, v.kosten - v.kwh * b.preis / $wirkungsgrad) AS \"Ersparnis\"\nFROM verschoben v, billig b"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Netzbezug"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatth"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Verschiebbar"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatth"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bezugskosten"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ersparnis"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyEUR"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#18BCF2"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    }
+  ]
+}

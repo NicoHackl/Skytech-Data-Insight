@@ -53,6 +53,10 @@ Als „Remote MCP Server" mit URL und Header eintragen. Clients ohne Header-Unte
 Der Server gibt dem Modell beim Verbinden eine Beschreibung von Datenmodell, Grafana-Datenquelle
 (`uid: skytech-db`) und Regeln mit (`instructions` in `app/mcp_server.py`).
 
+Dashboards, die zu einer Skytech-Funktion gehören, liegen versioniert unter
+[`grafana/dashboards/`](../grafana/dashboards/README.md) und werden mit
+`grafana_dashboard_speichern` hochgeladen.
+
 ## Schutz trotz Vollzugriff
 
 - **Automatische Sicherung** (`pg_dump`) vor jeder schreibenden Datenbank-Aktion; scheitert sie,

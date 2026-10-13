@@ -9,7 +9,7 @@ Meilensteine laut [Umsetzungsplan](umsetzungsplan.md#meilensteine).
 | M2 Backup | Dump vor HA-Backup, Auto-Restore, Download/Upload, Seite „Sicherungen" | **umgesetzt 27.09.2026** (0.4.0) |
 | M3 Verwaltungsoberfläche | Aufbewahrung, Zugänge, Migrationen, Protokoll (Sensoren in M1, Sicherungen in M2) | **umgesetzt 06.10.2026** (0.5.0) — Seiten Speicher, Protokoll, Migrationen, Zugänge (D-025); Test auf echter HA-Instanz offen |
 | M3b Altdaten-Import | Recorder und Langzeitstatistik | offen |
-| M4 Grafana | Datasource (vorgezogen in 0.3.0, D-022), Startdashboards | teilweise |
+| M4 Grafana | Datasource (vorgezogen in 0.3.0, D-022), Startdashboards | teilweise; versioniert unter `grafana/dashboards/`: „Skytech Dynamischer Strompreis“ (13.10.2026, per MCP gespeichert) |
 | M5 MCP | Server, Werkzeuge, Protokoll, automatische Sicherung | **umgesetzt 27.09.2026** (vorgezogen, D-021) |
 | M6 Härtung & Release | Last, Restore-Probe, Release | offen |
-| M7 HEMS-Anbindung | Weg B (direktes Schreiben, Rolle `skytech_hems`) gewählt für den dynamischen Strompreis (SkytechHEMS D-065): Prognose- und Preistabellen, vom HEMS verwaltete und gesperrte Sensoren, Vertrag `contract_hems_data_insight` | **Data-Insight-Seite umgesetzt 12.10.2026** (Migration 0003, [Vertrag 0.2](../contract/contract_hems_data_insight/contract_hems_data_insight.md), D-027); HEMS-Seite umgesetzt 13.10.2026 (HEMS-Phase P4) |
+| M7 HEMS-Anbindung | Weg B (direktes Schreiben, Rolle `skytech_hems`) gewählt für den dynamischen Strompreis (SkytechHEMS D-065): Prognose- und Preistabellen, vom HEMS verwaltete und gesperrte Sensoren, Vertrag `contract_hems_data_insight` | **Data-Insight-Seite umgesetzt 12.10.2026** (Migration 0003, [Vertrag 0.2](../contract/contract_hems_data_insight/contract_hems_data_insight.md), D-027); HEMS-Seite umgesetzt 13.10.2026 (HEMS-Phasen P4 und P5); Dashboard „Skytech Dynamischer Strompreis“ 13.10.2026 (HEMS-Phase P6) |
