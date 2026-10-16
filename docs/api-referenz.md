@@ -41,7 +41,7 @@ Name und Konfigurationsseite des Add-ons in Home Assistant für den Sidebar-Fuß
 immer mit 200.
 
 ```json
-{ "name": "Skytech Data Insight", "config_path": "/hassio/addon/e778e1d3_skytech_data_insight/config" }
+{ "name": "Skytech Data Insight", "config_path": "/config/app/e778e1d3_skytech_data_insight/config" }
 ```
 
 `name` und Slug kommen aus `GET /addons/self/info` des Supervisors; der Slug trägt das Präfix des

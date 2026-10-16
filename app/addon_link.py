@@ -42,5 +42,5 @@ async def fetch(supervisor: SupervisorClient) -> dict[str, Any] | None:
         return None
     return {
         "name": str(info.get("name") or FALLBACK_NAME),
-        "config_path": f"/hassio/addon/{slug}/config",
+        "config_path": f"/config/app/{slug}/config",
     }

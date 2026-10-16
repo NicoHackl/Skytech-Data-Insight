@@ -29,7 +29,7 @@ INFO = {"slug": "e778e1d3_skytech_data_insight", "name": "Skytech Data Insight"}
 async def test_link_nutzt_slug_mit_repository_praefix_und_namen_vom_supervisor():
     assert await addon_link.fetch(InfoSupervisor(INFO)) == {
         "name": "Skytech Data Insight",
-        "config_path": "/hassio/addon/e778e1d3_skytech_data_insight/config",
+        "config_path": "/config/app/e778e1d3_skytech_data_insight/config",
     }
 
 
@@ -58,6 +58,6 @@ async def test_endpunkt_merkt_nur_den_erfolg():
         sup.fehler = None
         sup.info = INFO
         body = await (await client.get("/api/addon")).json()
-        assert body["config_path"] == "/hassio/addon/e778e1d3_skytech_data_insight/config"
+        assert body["config_path"] == "/config/app/e778e1d3_skytech_data_insight/config"
         await client.get("/api/addon")
         assert sup.calls == 2
