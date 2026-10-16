@@ -8,6 +8,14 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Geändert — 16.10.2026 (Sidebar-Fuß führt zur Add-on-Konfiguration)
+
+- Links unten in der Sidebar stehen jetzt das Datenbank-Icon, der Name des Add-ons („Skytech Data
+  Insight“) und darunter „Addon-Config“. Ein Klick öffnet die Konfigurationsseite des Add-ons in
+  Home Assistant (D-028). Der bisherige Text „TimescaleDB / Langzeitablage“ entfällt. Der Fuß ist in
+  allen Skytech-Add-ons gleich aufgebaut.
+- Neuer Endpunkt `GET api/addon` liefert Name und Pfad der Konfigurationsseite vom Supervisor.
+
 ### Hinzugefügt — 13.10.2026 (Dashboard: Vergleich mit Festpreis)
 
 - Dashboard „Dynamischer Strompreis“: neues Panel „Dynamisch mit idealem Netzladen gegen

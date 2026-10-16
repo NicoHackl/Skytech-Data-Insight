@@ -35,6 +35,19 @@ Zustand der Dienste und der Aufzeichnung. Antwortet immer mit `200`.
 Migrationen scheitern, keine HA-Verbindung besteht oder Schreiben fehlschlägt – `detail` nennt den
 Grund.
 
+## `GET api/addon`
+
+Name und Konfigurationsseite des Add-ons in Home Assistant für den Sidebar-Fuß (D-028). Antwortet
+immer mit 200.
+
+```json
+{ "name": "Skytech Data Insight", "config_path": "/hassio/addon/e778e1d3_skytech_data_insight/config" }
+```
+
+`name` und Slug kommen aus `GET /addons/self/info` des Supervisors; der Slug trägt das Präfix des
+Add-on-Repositorys und ist deshalb nicht fest verdrahtet. Ohne Supervisor oder bei einem Fehler:
+`name` = „Skytech Data Insight“, `config_path` = `null`. Ein Erfolg wird bis zum Neustart gemerkt.
+
 ## `GET api/catalog`
 
 Auswahllisten: `kategorien` und `groessen` (`[{schluessel, bezeichnung}]`), vorhandene `anlagen`

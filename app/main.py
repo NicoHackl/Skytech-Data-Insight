@@ -18,6 +18,7 @@ import asyncpg
 from aiohttp import web
 
 import access_service
+import addon_link
 import backup
 import database
 import health
@@ -79,6 +80,7 @@ class AdminService:
         self._tasks: list[asyncio.Task] = []
         self.restorer = backup.Restorer()
         self.supervisor: SupervisorClient | None = None
+        self._addon_link: dict[str, Any] | None = None
 
     # ------------------------------------------------------------------
     # Lebenszyklus
@@ -199,6 +201,16 @@ class AdminService:
         if self.collector.backfill_status:
             text += f" · {self.collector.backfill_status}"
         return health.ServiceHealth("collector", "Aufzeichnung", True, text)
+
+    async def handle_addon(self, _request: web.Request) -> web.Response:
+        """Name und HA-Konfigurationsseite für den Sidebar-Fuß (D-028).
+
+        Antwortet immer mit 200: ohne Supervisor fehlt nur der Link. Gemerkt
+        wird nur ein Erfolg; ein Ausfall wird beim nächsten Aufruf erneut versucht.
+        """
+        if self._addon_link is None and self.supervisor is not None:
+            self._addon_link = await addon_link.fetch(self.supervisor)
+        return json_response(self._addon_link or addon_link.fallback())
 
     async def handle_status(self, _request: web.Request) -> web.Response:
         session = self._session
@@ -573,6 +585,7 @@ class AdminService:
         app.router.add_get("/", self.handle_index)
         app.router.add_get("/index.html", self.handle_index)
         app.router.add_get("/api/status", self.handle_status)
+        app.router.add_get("/api/addon", self.handle_addon)
         app.router.add_get("/api/catalog", self.handle_catalog)
         app.router.add_get("/api/sensors", self.handle_sensors)
         app.router.add_post("/api/sensors", self.handle_create_sensors)

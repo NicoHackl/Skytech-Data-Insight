@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { GRAFANA_PATH } from '../api'
+import { AddonFoot } from './AddonFoot'
 import { Icon } from './Icon'
 import { ThemeSwitch } from './Theme'
 
@@ -41,10 +42,7 @@ export function Layout() {
           <a href={GRAFANA_PATH} className="nav-item"><Icon name="chart" /><span>Grafana</span></a>
         </nav>
 
-        <div className="sidebar-foot">
-          <span className="avatar"><Icon name="database" size={16} /></span>
-          <div className="who"><b>TimescaleDB</b><span>Langzeitablage</span></div>
-        </div>
+        <AddonFoot />
       </aside>
 
       <main className="main">

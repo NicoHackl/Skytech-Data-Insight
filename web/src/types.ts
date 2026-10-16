@@ -237,3 +237,10 @@ export interface AccessChangeResult {
   /** Gespeichert, aber erst nach einem Neustart wirksam. */
   warnung: string | null
 }
+
+/** Antwort von `GET /api/addon` (D-028): Name und HA-Konfigurationsseite des
+    Add-ons. `config_path` fehlt ohne Supervisor — dann gibt es keinen Link. */
+export interface AddonInfo {
+  name: string
+  config_path: string | null
+}

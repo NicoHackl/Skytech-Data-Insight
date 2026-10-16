@@ -1,5 +1,5 @@
 import type {
-  AccessChangeResult, AccessKey, AccessResponse, BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource,
+  AccessChangeResult, AccessKey, AccessResponse, AddonInfo, BackupFile, BackupsResponse, Catalog, HaEntity, LogResponse, LogSource,
   MigrationSql, MigrationsResponse, Retention, Sensor, SensorDraft, SensorFieldsValue, StatusResponse, StorageResponse,
   UploadResult,
 } from './types'
@@ -46,6 +46,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 /* Jeder Aufruf ist ein benannter Eintrag — kein roher Pfad in einer Seite. */
 export const api = {
   status: () => request<StatusResponse>('/status'),
+  /* Name und HA-Konfigurationsseite des Add-ons für den Sidebar-Fuß (D-028). */
+  addon: () => request<AddonInfo>('/addon'),
   catalog: () => request<Catalog>('/catalog'),
   sensors: () => request<{ sensors: Sensor[] }>('/sensors').then((body) => body.sensors),
   createSensors: (sensors: SensorDraft[]) =>
