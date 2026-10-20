@@ -8,6 +8,12 @@ um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
 ## [Unreleased]
 
+### Dokumentation — 20.10.2026
+
+- Grundsatz der Skytech-Projekte in `contract/README.md` ergänzt: Jede Einheit, die anderen über
+  Home Assistant etwas mitteilt, veröffentlicht dafür genau eine Entität
+  `sensor.<einheit>_schnittstelle`. Der Austausch mit SkytechHEMS über die Datenbank ist als Ausnahme dokumentiert und bleibt unverändert.
+
 ### Geändert — 16.10.2026 (Sidebar-Fuß führt zur Add-on-Konfiguration)
 
 - Links unten in der Sidebar stehen jetzt das Datenbank-Icon, der Name des Add-ons („Skytech Data
