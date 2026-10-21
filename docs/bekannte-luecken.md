@@ -19,3 +19,12 @@
 | L-017 | Zeitfilter in `v_prognose_vs_ist` und `v_prognose_guete_tag` | Ein Filter auf `zeit` erreicht nur die aktuelle Prognose; Vortagsprognose und Ist werden vollständig gelesen, die Gütesicht rechnet immer die ganze Historie. Bei einem Jahr Läufen (≈ 3,4 Mio. Prognosewerte) dauert das Sekunden | Dashboards filtern jede Seite selbst ([grafana/dashboards](../grafana/dashboards/README.md)). Bei Bedarf die Sichten mit einer Migration umbauen (gleiche Spalten, Vertrag unberührt) |
 | L-016 | Aufbewahrung der Prognoseläufe | `aufbewahrung_prognose_tage` lässt sich nur per SQL ändern; die Seite „Speicher“ zeigt ihn nicht | Bei Bedarf in die Seite „Speicher“ aufnehmen |
 | L-014 | Seite „Zugänge“ auf echter HA-Instanz | Lokal gegen einen nachgebauten Supervisor getestet. Nicht auf echter Instanz gesehen: Rolle `manager` beim Update, `/network/info` mit dieser Rolle, `grafana cli` bei laufendem Grafana, `bashio::config` nach dem Speichern im MCP-Dienst | Nach dem Update 0.5.0: Passwort „nur lesen“ neu erzeugen und aus dem LAN anmelden; MCP-Token neu erzeugen (altes → 401, neues → 200) |
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.

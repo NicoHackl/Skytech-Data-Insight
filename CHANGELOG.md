@@ -6,6 +6,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 Die Add-on-Version in `config.yaml` wird bei jedem Merge nach `main` automatisch
 um eine Patch-Stelle erhöht (siehe `.github/workflows/bump-version.yaml`).
 
+## EVMS-Vorbereitung — 21.10.2026
+
+- Vertrag und Dokumentation für Fahrzeug- und Ladehistorie ergänzt; reiner Entwurf,
+  ohne Datenbankänderung. Gegenstelle: Skytech-EVMS, gemeinsames Arbeitspaket EVMS-P0/P1.
+
 ## [Unreleased]
 
 ### Dokumentation — 20.10.2026

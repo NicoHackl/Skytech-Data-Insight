@@ -152,3 +152,12 @@ entsprechen – Pfade sind ausgeschlossen.
 
 `<ingress>/grafana/` wird von nginx an Grafana weitergereicht (D-006); die Grafana-HTTP-API liegt
 unter `<ingress_entry>/grafana/api/…`.
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.

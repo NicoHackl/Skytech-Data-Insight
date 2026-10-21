@@ -127,3 +127,12 @@ nicht auf den Supervisor beschränkt. Ablauf in [test-strategie.md](test-strateg
 
 HA-Hooks `backup_pre`/`backup_post` (`/usr/bin/skytech-backup-*`), Einspielen über
 `/usr/lib/skytech/restore-db.sh`, Ablauf in [backup-restore.md](backup-restore.md).
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.

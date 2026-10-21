@@ -169,3 +169,12 @@ rechnet er nach, sobald das HEMS Werte schreibt.
 Nur Datenbank `skytech`; ohne gesetztes Passwort ist die LAN-Anmeldung gesperrt. Was
 `skytech_admin` neu anlegt, darf `skytech_reader` automatisch lesen. Zugang aus VSCode:
 [datenbankzugang.md](datenbankzugang.md).
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.

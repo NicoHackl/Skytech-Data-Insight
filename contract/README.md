@@ -54,3 +54,9 @@ Dokumentierte Ausnahmen:
 
 Die übrigen HTTP-/MCP- und Datenbankschnittstellen sind kein bilateraler Vertrag und bleiben in
 [API-Referenz](../docs/api-referenz.md) und [Datenmodell](../docs/datenmodell.md) beschrieben.
+
+## EVMS — Entwurf
+
+[EVMS ↔ Data Insight](contract_evms_data_insight/contract_evms_data_insight.md), Version 0.1:
+Fahrzeuge, Zuordnungen und Ladehistorie. Noch keine Rolle, Migration oder SQL-Funktion
+implementiert. Die bestehende HEMS-Anbindung bleibt unverändert.

@@ -44,3 +44,12 @@ Abweichungen in [bekannte-luecken.md](bekannte-luecken.md).
 - **Jede Information genau einmal.** Steht etwas in `AGENTS.md`, wird es hier verlinkt, nicht kopiert.
 - Nicht zutreffende Dateien werden **gelöscht**, nicht mit Platzhaltertext stehengelassen.
 - Änderungen an Verhalten und Doku gehören ins **selbe** Arbeitspaket.
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.

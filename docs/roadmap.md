@@ -13,3 +13,12 @@ Meilensteine laut [Umsetzungsplan](umsetzungsplan.md#meilensteine).
 | M5 MCP | Server, Werkzeuge, Protokoll, automatische Sicherung | **umgesetzt 27.09.2026** (vorgezogen, D-021) |
 | M6 Härtung & Release | Last, Restore-Probe, Release | offen |
 | M7 HEMS-Anbindung | Weg B (direktes Schreiben, Rolle `skytech_hems`) gewählt für den dynamischen Strompreis (SkytechHEMS D-065): Prognose- und Preistabellen, vom HEMS verwaltete und gesperrte Sensoren, Vertrag `contract_hems_data_insight` | **Data-Insight-Seite umgesetzt 12.10.2026** (Migration 0003, [Vertrag 0.2](../contract/contract_hems_data_insight/contract_hems_data_insight.md), D-027); HEMS-Seite umgesetzt 13.10.2026 (HEMS-Phasen P4 und P5); Dashboard „Skytech Dynamischer Strompreis“ 13.10.2026 (HEMS-Phase P6) |
+
+## Geplante EVMS-Anbindung
+
+Der [Vertragsentwurf](../contract/contract_evms_data_insight/contract_evms_data_insight.md)
+definiert die geplante Langzeitablage von Fahrzeugen, Zuordnungen, Ladevorgängen und
+zeitlichen Energieabschnitten. EVMS übernimmt die Fachlogik. Noch keine neue Rolle,
+Migration, Schreibfunktion oder Auswertung implementiert. Ladeziel-/Sitzungsmodell,
+Auswertungsumfang und Wiederanlauf/Puffer sind vor Umsetzung zu entscheiden.
+Data Insight wird keine Voraussetzung für die laufende HEMS-Leistungsregelung.
